@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/GeoKasInsumos" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
