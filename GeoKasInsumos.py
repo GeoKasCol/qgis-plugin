@@ -30,6 +30,7 @@ from .resources import *
 # Import the code for the dialog
 from .GeoKasInsumos_dialog import GeoKasInsumosDialog
 import os.path
+import os
 
 
 class GeoKasInsumos:
@@ -180,6 +181,35 @@ class GeoKasInsumos:
             self.iface.removeToolBarIcon(action)
 
 
+    def on_license_changed(self):
+        if len(self.dlg.lineEditLicencia.text()) > 0:
+            self.dlg.buttonVerificar.setEnabled(True)
+        else:
+            self.dlg.buttonVerificar.setEnabled(False)
+
+    def verificarClicked(self):
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        file_path = current_directory+"/license.txt"
+        print(file_path)
+    
+        if not os.path.exists(file_path):
+            # Si el archivo no existe, lo creamos y escribimos algo en él
+            with open(file_path, 'w') as file:
+                file.write(self.dlg.lineEditLicencia.text())
+            #print("Archivo 'license.txt' creado.")
+        else:
+            # Si el archivo ya existe, lo leemos
+            with open(file_path, 'r') as file:
+                content = file.read()
+            if content != self.dlg.lineEditLicencia.text():
+                os.remove(file_path)
+                with open(file_path, 'w') as file:
+                    file.write(self.dlg.lineEditLicencia.text())
+            #print("Contenido del archivo 'license.txt':")
+            #print(content)
+        self.dlg.labelNombreLicencia.setText("Licencia verificada")
+        self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
+
     def run(self):
         """Run method that performs all the real work"""
 
@@ -191,6 +221,26 @@ class GeoKasInsumos:
 
         # show the dialog
         self.dlg.show()
+
+        self.dlg.lineEditLicencia.textChanged.connect(self.on_license_changed)
+        self.dlg.buttonVerificar.clicked.connect(self.verificarClicked)
+        
+
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        file_path = current_directory+"/license.txt"
+        print(file_path)
+    
+        if os.path.exists(file_path):
+            print("prueba")
+            # Si el archivo existe
+            with open(file_path, 'r') as file:
+                content = file.read()
+                self.dlg.lineEditLicencia.setText(content)
+            self.dlg.labelNombreLicencia.setText("Licencia verificada")
+            self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
+            #print("Contenido del archivo 'license.txt':")
+            #print(content)
+
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
