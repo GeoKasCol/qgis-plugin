@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QComboBox  # Add import for QComboBox
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -168,6 +168,12 @@ class GeoKasInsumos:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        # Add combo box to the toolbar
+        self.combo_box = QComboBox(self.iface.mainWindow())
+        self.combo_box.addItems(["Ir a ...", "Jamundi", "Zipaquira"])
+        self.combo_box.currentTextChanged.connect(self.cambioComboBox)
+        self.iface.addToolBarWidget(self.combo_box)
+
         # will be set False in run()
         self.first_start = True
 
@@ -179,7 +185,11 @@ class GeoKasInsumos:
                 self.tr(u'&GeoKas Insumos'),
                 action)
             self.iface.removeToolBarIcon(action)
+        # Remove the combo box from the toolbar
+        self.combo_box.setParent(None)
 
+    def cambioComboBox(self, text):
+        print("Opcion seleccionada: "+text)
 
     def on_license_changed(self):
         if len(self.dlg.lineEditLicencia.text()) > 0:
