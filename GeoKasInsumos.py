@@ -21,7 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox  # Add import for QComboBox and QCheckBox
 from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
@@ -30,9 +30,12 @@ from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and Qg
 from .resources import *
 # Import the code for the dialog
 from .GeoKasInsumos_dialog import GeoKasInsumosDialog
+from .GeoKasInsumos_dialog_2 import GeoKasInsumosDialog_2
 import os.path
 import os
 from qgis.PyQt.QtWidgets import QFrame
+from qgis.PyQt.QtWebKitWidgets import QWebView
+#from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 class GeoKasInsumos:
@@ -166,12 +169,12 @@ class GeoKasInsumos:
         icon_path = ':/plugins/GeoKasInsumos/icon.png'
 
         current_directory = os.path.dirname(os.path.realpath(__file__))
-        eye_path = current_directory+"/icon_eye_2.png"
+        eye_path = current_directory+"/icon_eye.png"
 
         self.add_action(
             eye_path,
-            text=self.tr(u'GeoKas Insumos'),
-            callback=self.run,
+            text=self.tr(u'Visualizar Insumos'),
+            callback=self.viewInsumos,
             parent=self.iface.mainWindow())
 
 
@@ -206,6 +209,19 @@ class GeoKasInsumos:
         self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
         self.iface.addToolBarWidget(self.combo_box2)
 
+        self.separador4 = QFrame()
+        self.separador4.setFrameShape(QFrame.VLine)
+        self.separador4.setFrameShadow(QFrame.Sunken)
+        self.iface.addToolBarWidget(self.separador4)
+
+        configure_path = current_directory+"/icon_setting.png"
+
+        self.add_action(
+            configure_path,
+            text=self.tr(u'Configurar Insumos'),
+            callback=self.configure,
+            parent=self.iface.mainWindow())
+
         # will be set False in run()
         self.first_start = True
 
@@ -223,6 +239,7 @@ class GeoKasInsumos:
         self.check_box.setParent(None)
         self.separador3.setParent(None)
         self.combo_box2.setParent(None)
+        self.separador4.setParent(None)
 
     def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
@@ -283,16 +300,30 @@ class GeoKasInsumos:
         if state == 2:
             print("State changed: " + str(state))
         elif state == 0:
-            
-        print("State changed: " + str(state))
+            print("State changed: " + str(state))
+
+    def viewInsumos(self):
+        print("Insumos")
+        if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
+            self.dlg_2 = GeoKasInsumosDialog_2()
+        self.dlg_2.show()
+        #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
+        web_view = QWebView()
+        web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/"))
+        # Remove all widgets from the container before adding a new one
+        while self.dlg_2.contenedor.count() > 0:
+            widget_to_remove = self.dlg_2.contenedor.takeAt(0).widget()
+            if widget_to_remove is not None:
+                widget_to_remove.deleteLater()
+
+        # Add the new widget
+        self.dlg_2.contenedor.addWidget(web_view)
     
-    def run(self):
+    def configure(self):
         """Run method that performs all the real work"""
 
         # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start == True:
-            self.first_start = False
+        if not hasattr(self, 'dlg') or self.dlg is None:
             self.dlg = GeoKasInsumosDialog()
 
         # show the dialog
