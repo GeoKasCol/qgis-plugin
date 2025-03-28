@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QComboBox  # Add import for QComboBox
+from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox  # Add import for QComboBox and QCheckBox
 from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
 
 # Initialize Qt resources from file resources.py
@@ -164,11 +164,16 @@ class GeoKasInsumos:
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
         icon_path = ':/plugins/GeoKasInsumos/icon.png'
+
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        eye_path = current_directory+"/icon_eye_2.png"
+
         self.add_action(
-            icon_path,
+            eye_path,
             text=self.tr(u'GeoKas Insumos'),
             callback=self.run,
             parent=self.iface.mainWindow())
+
 
         self.separador1 = QFrame()
         self.separador1.setFrameShape(QFrame.VLine)
@@ -186,6 +191,16 @@ class GeoKasInsumos:
         self.separador2.setFrameShadow(QFrame.Sunken)
         self.iface.addToolBarWidget(self.separador2)
 
+        self.check_box = QCheckBox(self.iface.mainWindow())
+        self.check_box.setText("Mostrar AOI's")
+        self.check_box.stateChanged.connect(self.cambioMostrarAOI)
+        self.iface.addToolBarWidget(self.check_box)
+
+        self.separador3 = QFrame()
+        self.separador3.setFrameShape(QFrame.VLine)
+        self.separador3.setFrameShadow(QFrame.Sunken)
+        self.iface.addToolBarWidget(self.separador3)
+
         self.combo_box2 = QComboBox(self.iface.mainWindow())
         self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
         self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
@@ -202,11 +217,12 @@ class GeoKasInsumos:
                 self.tr(u'&GeoKas Insumos'),
                 action)
             self.iface.removeToolBarIcon(action)
-        # Remove the combo box from the toolbar
-        self.combo_box.setParent(None)
         self.separador1.setParent(None)
-        self.combo_box2.setParent(None)
+        self.combo_box.setParent(None)
         self.separador2.setParent(None)
+        self.check_box.setParent(None)
+        self.separador3.setParent(None)
+        self.combo_box2.setParent(None)
 
     def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
@@ -263,6 +279,13 @@ class GeoKasInsumos:
         self.dlg.labelNombreLicencia.setText("Licencia verificada")
         self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
 
+    def cambioMostrarAOI(self, state):
+        if state == 2:
+            print("State changed: " + str(state))
+        elif state == 0:
+            
+        print("State changed: " + str(state))
+    
     def run(self):
         """Run method that performs all the real work"""
 
