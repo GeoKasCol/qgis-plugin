@@ -30,7 +30,8 @@ from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and Qg
 from .resources import *
 # Import the code for the dialog
 from .GeoKasInsumos_dialog import GeoKasInsumosDialog
-from .GeoKasInsumos_dialog_2 import GeoKasInsumosDialog_2, GeoKasInsumosDockableDialog
+from .GeoKasInsumos_dialog_2 import GeoKasInsumosDialog_2, GeoKasInsumosDockableDialog2
+from .GeoKasInsumos_dialog_3 import GeoKasInsumosDialog_3, GeoKasInsumosDockableDialog3
 import os.path
 import os
 from qgis.PyQt.QtWidgets import QFrame
@@ -303,9 +304,8 @@ class GeoKasInsumos:
             print("State changed: " + str(state))
 
     def viewInsumos(self):
-        print("Insumos")
         if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
-            self.dlg_2 = GeoKasInsumosDockableDialog()
+            self.dlg_2 = GeoKasInsumosDockableDialog2()
                 
         # Anclar el DockWidget
         self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_2)
@@ -322,6 +322,26 @@ class GeoKasInsumos:
 
         # Add the new widget
         self.dlg_2.dialog_widget.contenedor.addWidget(web_view)
+
+
+        if not hasattr(self, 'dlg_3') or self.dlg_3 is None:
+            self.dlg_3 = GeoKasInsumosDockableDialog3()
+                
+        # Anclar el DockWidget
+        self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_3)
+
+        self.dlg_3.show()
+        #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
+        web_view3 = QWebView()
+        web_view3.setUrl(QUrl("https://www.google.com"))
+        # Remove all widgets from the container before adding a new one
+        while self.dlg_3.dialog_widget.contenedor.count() > 0:
+            widget_to_remove = self.dlg_3.dialog_widget.contenedor.takeAt(0).widget()
+            if widget_to_remove is not None:
+                widget_to_remove.deleteLater()
+
+        # Add the new widget
+        self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
     
     def configure(self):
         """Run method that performs all the real work"""

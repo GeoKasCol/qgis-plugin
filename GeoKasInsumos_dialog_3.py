@@ -30,13 +30,13 @@ from qgis.PyQt import QtWidgets
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'GeoKasInsumos_dialog_base_2.ui'))
+    os.path.dirname(__file__), 'GeoKasInsumos_dialog_base_3.ui'))
 
 
-class GeoKasInsumosDialog_2(QtWidgets.QDialog, FORM_CLASS):
+class GeoKasInsumosDialog_3(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
-        super(GeoKasInsumosDialog_2, self).__init__(parent)
+        super(GeoKasInsumosDialog_3, self).__init__(parent)
         # Set up the user interface from Designer through FORM_CLASS.
         # After self.setupUi() you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
@@ -45,12 +45,12 @@ class GeoKasInsumosDialog_2(QtWidgets.QDialog, FORM_CLASS):
         self.setupUi(self)
 
 # Crear una subclase de QDockWidget para anclar tu diálogo
-class GeoKasInsumosDockableDialog2(QtWidgets.QDockWidget):
+class GeoKasInsumosDockableDialog3(QtWidgets.QDockWidget):
     def __init__(self):
-        super().__init__("Modelo 3D - GeoKas Insumos")
+        super().__init__("360 - GeoKas Insumos")
         
         # Crear una instancia de tu QDialog (GeoKasInsumosDialog_2)
-        self.dialog_widget = GeoKasInsumosDialog_2()
+        self.dialog_widget = GeoKasInsumosDialog_3()
 
         # Establecer tu QDialog como el widget dentro del QDockWidget
         self.setWidget(self.dialog_widget)
