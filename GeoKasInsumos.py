@@ -24,6 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QComboBox  # Add import for QComboBox
+from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -31,6 +32,7 @@ from .resources import *
 from .GeoKasInsumos_dialog import GeoKasInsumosDialog
 import os.path
 import os
+from qgis.PyQt.QtWidgets import QFrame
 
 
 class GeoKasInsumos:
@@ -168,11 +170,26 @@ class GeoKasInsumos:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        self.separador1 = QFrame()
+        self.separador1.setFrameShape(QFrame.VLine)
+        self.separador1.setFrameShadow(QFrame.Sunken)
+        self.iface.addToolBarWidget(self.separador1)
+        
         # Add combo box to the toolbar
         self.combo_box = QComboBox(self.iface.mainWindow())
         self.combo_box.addItems(["Ir a ...", "Jamundi", "Zipaquira"])
-        self.combo_box.currentTextChanged.connect(self.cambioComboBox)
+        self.combo_box.currentTextChanged.connect(self.cambioComboBoxZona)
         self.iface.addToolBarWidget(self.combo_box)
+
+        self.separador2 = QFrame()
+        self.separador2.setFrameShape(QFrame.VLine)
+        self.separador2.setFrameShadow(QFrame.Sunken)
+        self.iface.addToolBarWidget(self.separador2)
+
+        self.combo_box2 = QComboBox(self.iface.mainWindow())
+        self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
+        self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
+        self.iface.addToolBarWidget(self.combo_box2)
 
         # will be set False in run()
         self.first_start = True
@@ -187,9 +204,35 @@ class GeoKasInsumos:
             self.iface.removeToolBarIcon(action)
         # Remove the combo box from the toolbar
         self.combo_box.setParent(None)
+        self.separador1.setParent(None)
+        self.combo_box2.setParent(None)
+        self.separador2.setParent(None)
 
-    def cambioComboBox(self, text):
+    def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
+    
+    def cambioComboBoxXYZ(self, text):
+        print("Opcion seleccionada: "+text)
+        if text == "XYZ Jamundi":
+            layer = QgsRasterLayer(
+                "type=xyz&url=https://xyz-jamundi.geokas.com.co/Z{z}/{y}/{X}.jpg?token=asbdasjdbas&zmax=23",
+                "XYZ Jamundi",
+                "wms"
+            )
+            if not layer.isValid():
+                print("Failed to load XYZ Jamundi layer")
+            else:
+                QgsProject.instance().addMapLayer(layer)
+        elif text == "XYZ Bruselas":
+            layer = QgsRasterLayer(
+                "type=xyz&url=https://2d-bruselas-pit-col.falconprecision.co/Z{z}/{y}/{X}.png?token=asbdasjdbas&zmax=23",
+                "XYZ Bruselas",
+                "wms"
+            )
+            if not layer.isValid():
+                print("Failed to load XYZ Bruselas layer")
+            else:
+                QgsProject.instance().addMapLayer(layer)
 
     def on_license_changed(self):
         if len(self.dlg.lineEditLicencia.text()) > 0:
