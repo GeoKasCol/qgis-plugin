@@ -36,6 +36,8 @@ import os.path
 import os
 from qgis.PyQt.QtWidgets import QFrame
 from qgis.PyQt.QtWebKitWidgets import QWebView
+import requests
+from datetime import datetime
 #from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
@@ -326,6 +328,8 @@ class GeoKasInsumos:
         If the license is valid, enable the checkboxes and set the labels.
         If the license is invalid, disable the checkboxes and clear the labels.
         """
+        base_url="https://5ea8-190-90-234-21.ngrok-free.app/"
+        url_restante_licencia="api/plugins/insumos/check-license?token="
         current_directory = os.path.dirname(os.path.realpath(__file__))
         file_path = current_directory+"/license.txt"
         license_key=""
@@ -333,13 +337,32 @@ class GeoKasInsumos:
             with open(file_path, 'r') as file:
                 content = file.read()
                 license_key = content
-            if(1==1):#Cambiar por la verificacion con el API
-                self.dlg.labelNombreLicencia.setText("Licencia verificada")
-                self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
-                self.dlg.lineEditLicencia.setText(license_key)
-                self.dlg.check360.setEnabled(True)
-                self.dlg.checkModelo_3D.setEnabled(True)
-                self.dlg.checkNubePuntos.setEnabled(True)
+            try:
+                response = requests.get(base_url+url_restante_licencia+license_key)
+                license_data = response.json()
+                if response.status_code == 200:
+                    self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"]+" - "+license_data["data"]["licencia"]["proyecto"])
+                    self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date()))
+                    self.dlg.lineEditLicencia.setText(license_key)
+                    self.dlg.check360.setEnabled(True)
+                    self.dlg.checkModelo_3D.setEnabled(True)
+                    self.dlg.checkNubePuntos.setEnabled(True)
+                elif response.status_code == 401:
+                    self.dlg.labelNombreLicencia.setText("Licencia no valida")
+                    self.dlg.labelDuracionLicencia.setText("")
+                    self.dlg.lineEditLicencia.setText("")
+                    self.dlg.check360.setEnabled(False)
+                    self.dlg.checkModelo_3D.setEnabled(False)
+                    self.dlg.checkNubePuntos.setEnabled(False)
+                elif response.status_code == 403:
+                    self.dlg.labelNombreLicencia.setText("Licencia Expirada")
+                    self.dlg.labelDuracionLicencia.setText("")
+                    self.dlg.lineEditLicencia.setText("")
+                    self.dlg.check360.setEnabled(False)
+                    self.dlg.checkModelo_3D.setEnabled(False)
+                    self.dlg.checkNubePuntos.setEnabled(False)
+            except requests.RequestException as e:
+                print("An error occurred while verifying the license:", e)
         else:
             self.dlg.labelNombreLicencia.setText("Sin licencia")
             self.dlg.labelDuracionLicencia.setText("")
