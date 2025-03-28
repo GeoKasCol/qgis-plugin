@@ -198,7 +198,7 @@ class GeoKasInsumos:
         self.check_box.setText("Mostrar AOI's")
         self.check_box.stateChanged.connect(self.cambioMostrarAOI)
         self.toolbar.addWidget(self.check_box)
-        
+
 
         self.combo_box2 = QComboBox(self.iface.mainWindow())
         self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
@@ -271,28 +271,8 @@ class GeoKasInsumos:
         else:
             self.dlg.buttonVerificar.setEnabled(False)
 
-    def verificarClicked(self):
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        file_path = current_directory+"/license.txt"
-        print(file_path)
-    
-        if not os.path.exists(file_path):
-            # Si el archivo no existe, lo creamos y escribimos algo en él
-            with open(file_path, 'w') as file:
-                file.write(self.dlg.lineEditLicencia.text())
-            #print("Archivo 'license.txt' creado.")
-        else:
-            # Si el archivo ya existe, lo leemos
-            with open(file_path, 'r') as file:
-                content = file.read()
-            if content != self.dlg.lineEditLicencia.text():
-                os.remove(file_path)
-                with open(file_path, 'w') as file:
-                    file.write(self.dlg.lineEditLicencia.text())
-            #print("Contenido del archivo 'license.txt':")
-            #print(content)
-        self.dlg.labelNombreLicencia.setText("Licencia verificada")
-        self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
+    def button_verificar_clicked(self):
+        self.write_license()
 
     def cambioMostrarAOI(self, state):
         if state == 2:
@@ -339,6 +319,52 @@ class GeoKasInsumos:
 
         # Add the new widget
         self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
+
+    def check_license(self):
+        """
+        Check if the license file exists and read its content.
+        If the license is valid, enable the checkboxes and set the labels.
+        If the license is invalid, disable the checkboxes and clear the labels.
+        """
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        file_path = current_directory+"/license.txt"
+        license_key=""
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as file:
+                content = file.read()
+                license_key = content
+            if(1==1):#Cambiar por la verificacion con el API
+                self.dlg.labelNombreLicencia.setText("Licencia verificada")
+                self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
+                self.dlg.lineEditLicencia.setText(license_key)
+                self.dlg.check360.setEnabled(True)
+                self.dlg.checkModelo_3D.setEnabled(True)
+                self.dlg.checkNubePuntos.setEnabled(True)
+        else:
+            self.dlg.labelNombreLicencia.setText("Sin licencia")
+            self.dlg.labelDuracionLicencia.setText("")
+            self.dlg.lineEditLicencia.setText("")
+            self.dlg.check360.setEnabled(False)
+            self.dlg.checkModelo_3D.setEnabled(False)
+            self.dlg.checkNubePuntos.setEnabled(False)
+
+    def write_license(self):
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        file_path = current_directory+"/license.txt"
+    
+        if not os.path.exists(file_path):
+            # Si el archivo no existe, lo creamos y escribimos algo en él
+            with open(file_path, 'w') as file:
+                file.write(self.dlg.lineEditLicencia.text())
+        else:
+            # Si el archivo ya existe, lo leemos
+            with open(file_path, 'r') as file:
+                content = file.read()
+            if content != self.dlg.lineEditLicencia.text():
+                os.remove(file_path)
+                with open(file_path, 'w') as file:
+                    file.write(self.dlg.lineEditLicencia.text())
+        self.check_license()
     
     def configure(self):
         """Run method that performs all the real work"""
@@ -347,27 +373,15 @@ class GeoKasInsumos:
         if not hasattr(self, 'dlg') or self.dlg is None:
             self.dlg = GeoKasInsumosDialog()
 
-        # show the dialog
-        self.dlg.show()
-
         self.dlg.lineEditLicencia.textChanged.connect(self.on_license_changed)
-        self.dlg.buttonVerificar.clicked.connect(self.verificarClicked)
+        self.dlg.buttonVerificar.clicked.connect(self.button_verificar_clicked)
+
         
 
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        file_path = current_directory+"/license.txt"
-        print(file_path)
-    
-        if os.path.exists(file_path):
-            print("prueba")
-            # Si el archivo existe
-            with open(file_path, 'r') as file:
-                content = file.read()
-                self.dlg.lineEditLicencia.setText(content)
-            self.dlg.labelNombreLicencia.setText("Licencia verificada")
-            self.dlg.labelDuracionLicencia.setText("Desde 01/01/2025 hasta 01/01/2026")
-            #print("Contenido del archivo 'license.txt':")
-            #print(content)
+        self.check_license()
+
+        # show the dialog
+        self.dlg.show()
 
         # Run the dialog event loop
         result = self.dlg.exec_()

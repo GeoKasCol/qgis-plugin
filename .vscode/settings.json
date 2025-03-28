@@ -1,0 +1,4 @@
+{
+    "python.autoComplete.extraPaths": ["C:\\OSGeo4W\\apps\\qgis-ltr\\python"],
+    "python.defaultInterpreterPath": "C:\\OSGeo4W\\apps\\Python312\\python.exe"
+}
