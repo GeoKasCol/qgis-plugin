@@ -167,80 +167,94 @@ class GeoKasInsumos:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
+        # Create a new toolbar for the plugin
+        self.toolbar = self.iface.addToolBar("GeoKas Insumos")
+        self.toolbar.setObjectName("GeoKasInsumosToolbar")
+
         icon_path = ':/plugins/GeoKasInsumos/icon.png'
 
         current_directory = os.path.dirname(os.path.realpath(__file__))
-        eye_path = current_directory+"/icon_eye.png"
+        eye_path = current_directory + "/icon_eye.png"
 
         self.add_action(
             eye_path,
             text=self.tr(u'Visualizar Insumos'),
             callback=self.viewInsumos,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow(),
+            add_to_toolbar=False  # Do not add to default toolbar
+        )
 
+        self.toolbar.addAction(
+            self.actions[-1]
+        )  # Add the action to the custom toolbar
 
         self.separador1 = QFrame()
         self.separador1.setFrameShape(QFrame.VLine)
         self.separador1.setFrameShadow(QFrame.Sunken)
-        self.iface.addToolBarWidget(self.separador1)
-        
-        # Add combo box to the toolbar
+        self.toolbar.addWidget(self.separador1)
+
+        # Add combo box to the custom toolbar
         self.combo_box = QComboBox(self.iface.mainWindow())
         self.combo_box.addItems(["Ir a ...", "Jamundi", "Zipaquira"])
         self.combo_box.currentTextChanged.connect(self.cambioComboBoxZona)
-        self.iface.addToolBarWidget(self.combo_box)
+        self.toolbar.addWidget(self.combo_box)
 
         self.separador2 = QFrame()
         self.separador2.setFrameShape(QFrame.VLine)
         self.separador2.setFrameShadow(QFrame.Sunken)
-        self.iface.addToolBarWidget(self.separador2)
+        self.toolbar.addWidget(self.separador2)
 
         self.check_box = QCheckBox(self.iface.mainWindow())
         self.check_box.setText("Mostrar AOI's")
         self.check_box.stateChanged.connect(self.cambioMostrarAOI)
-        self.iface.addToolBarWidget(self.check_box)
+        self.toolbar.addWidget(self.check_box)
 
         self.separador3 = QFrame()
         self.separador3.setFrameShape(QFrame.VLine)
         self.separador3.setFrameShadow(QFrame.Sunken)
-        self.iface.addToolBarWidget(self.separador3)
+        self.toolbar.addWidget(self.separador3)
 
         self.combo_box2 = QComboBox(self.iface.mainWindow())
         self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
         self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
-        self.iface.addToolBarWidget(self.combo_box2)
+        self.toolbar.addWidget(self.combo_box2)
 
         self.separador4 = QFrame()
         self.separador4.setFrameShape(QFrame.VLine)
         self.separador4.setFrameShadow(QFrame.Sunken)
-        self.iface.addToolBarWidget(self.separador4)
+        self.toolbar.addWidget(self.separador4)
 
-        configure_path = current_directory+"/icon_setting.png"
+        configure_path = current_directory + "/icon_setting.png"
 
         self.add_action(
             configure_path,
             text=self.tr(u'Configurar Insumos'),
             callback=self.configure,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow(),
+            add_to_toolbar=False  # Do not add to default toolbar
+        )
+
+        self.toolbar.addAction(
+            self.actions[-1]
+        )  # Add the action to the custom toolbar
 
         # will be set False in run()
         self.first_start = True
 
 
     def unload(self):
-        """Removes the plugin menu item and icon from QGIS GUI."""
+        """Removes the plugin menu item, icon, and custom toolbar from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
                 self.tr(u'&GeoKas Insumos'),
                 action)
             self.iface.removeToolBarIcon(action)
-        self.separador1.setParent(None)
-        self.combo_box.setParent(None)
-        self.separador2.setParent(None)
-        self.check_box.setParent(None)
-        self.separador3.setParent(None)
-        self.combo_box2.setParent(None)
-        self.separador4.setParent(None)
+
+        # Remove custom toolbar and its widgets
+        if hasattr(self, 'toolbar'):
+            self.toolbar.clear()  # Clear all widgets and actions from the toolbar
+            self.iface.mainWindow().removeToolBar(self.toolbar)  # Remove the toolbar from the main window
+            self.toolbar = None
 
     def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
