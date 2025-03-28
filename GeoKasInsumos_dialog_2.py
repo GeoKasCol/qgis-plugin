@@ -26,6 +26,7 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+#from qgis.core import QgisInterface
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -42,3 +43,14 @@ class GeoKasInsumosDialog_2(QtWidgets.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+
+# Crear una subclase de QDockWidget para anclar tu diálogo
+class GeoKasInsumosDockableDialog(QtWidgets.QDockWidget):
+    def __init__(self):
+        super().__init__("GeoKas Insumos")
+        
+        # Crear una instancia de tu QDialog (GeoKasInsumosDialog_2)
+        self.dialog_widget = GeoKasInsumosDialog_2()
+
+        # Establecer tu QDialog como el widget dentro del QDockWidget
+        self.setWidget(self.dialog_widget)

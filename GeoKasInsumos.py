@@ -21,7 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox  # Add import for QComboBox and QCheckBox
 from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
@@ -30,7 +30,7 @@ from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and Qg
 from .resources import *
 # Import the code for the dialog
 from .GeoKasInsumos_dialog import GeoKasInsumosDialog
-from .GeoKasInsumos_dialog_2 import GeoKasInsumosDialog_2
+from .GeoKasInsumos_dialog_2 import GeoKasInsumosDialog_2, GeoKasInsumosDockableDialog
 import os.path
 import os
 from qgis.PyQt.QtWidgets import QFrame
@@ -305,19 +305,23 @@ class GeoKasInsumos:
     def viewInsumos(self):
         print("Insumos")
         if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
-            self.dlg_2 = GeoKasInsumosDialog_2()
+            self.dlg_2 = GeoKasInsumosDockableDialog()
+                
+        # Anclar el DockWidget
+        self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_2)
+
         self.dlg_2.show()
         #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
         web_view = QWebView()
-        web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/"))
+        web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/?scene=Jamundi&cX=-974.1265&cY=1136.1052&cZ=1170.6126&upX=0.0000&upY=0.0000&upZ=1.0000&tX=-972.6563&tY=1161.6604&tZ=1008.4842"))
         # Remove all widgets from the container before adding a new one
-        while self.dlg_2.contenedor.count() > 0:
-            widget_to_remove = self.dlg_2.contenedor.takeAt(0).widget()
+        while self.dlg_2.dialog_widget.contenedor.count() > 0:
+            widget_to_remove = self.dlg_2.dialog_widget.contenedor.takeAt(0).widget()
             if widget_to_remove is not None:
                 widget_to_remove.deleteLater()
 
         # Add the new widget
-        self.dlg_2.contenedor.addWidget(web_view)
+        self.dlg_2.dialog_widget.contenedor.addWidget(web_view)
     
     def configure(self):
         """Run method that performs all the real work"""
