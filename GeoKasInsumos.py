@@ -188,41 +188,24 @@ class GeoKasInsumos:
             self.actions[-1]
         )  # Add the action to the custom toolbar
 
-        self.separador1 = QFrame()
-        self.separador1.setFrameShape(QFrame.VLine)
-        self.separador1.setFrameShadow(QFrame.Sunken)
-        self.toolbar.addWidget(self.separador1)
-
         # Add combo box to the custom toolbar
         self.combo_box = QComboBox(self.iface.mainWindow())
         self.combo_box.addItems(["Ir a ...", "Jamundi", "Zipaquira"])
         self.combo_box.currentTextChanged.connect(self.cambioComboBoxZona)
         self.toolbar.addWidget(self.combo_box)
 
-        self.separador2 = QFrame()
-        self.separador2.setFrameShape(QFrame.VLine)
-        self.separador2.setFrameShadow(QFrame.Sunken)
-        self.toolbar.addWidget(self.separador2)
-
         self.check_box = QCheckBox(self.iface.mainWindow())
         self.check_box.setText("Mostrar AOI's")
         self.check_box.stateChanged.connect(self.cambioMostrarAOI)
         self.toolbar.addWidget(self.check_box)
-
-        self.separador3 = QFrame()
-        self.separador3.setFrameShape(QFrame.VLine)
-        self.separador3.setFrameShadow(QFrame.Sunken)
-        self.toolbar.addWidget(self.separador3)
+        
 
         self.combo_box2 = QComboBox(self.iface.mainWindow())
         self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
         self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
         self.toolbar.addWidget(self.combo_box2)
 
-        self.separador4 = QFrame()
-        self.separador4.setFrameShape(QFrame.VLine)
-        self.separador4.setFrameShadow(QFrame.Sunken)
-        self.toolbar.addWidget(self.separador4)
+        
 
         configure_path = current_directory + "/icon_setting.png"
 
