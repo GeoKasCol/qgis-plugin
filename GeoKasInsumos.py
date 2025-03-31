@@ -51,6 +51,8 @@ class GeoKasInsumos:
     array_insumos = []
     array_aoi = []
     array_rubber_bands = []
+    array_xyzs = []
+    license_key = ""
 
     def __init__(self, iface):
         """Constructor.
@@ -201,7 +203,6 @@ class GeoKasInsumos:
 
         # Add combo box to the custom toolbar
         self.combo_box = QComboBox(self.iface.mainWindow())
-        self.check_license()
         self.combo_box.currentTextChanged.connect(self.cambioComboBoxZona)
         self.toolbar.addWidget(self.combo_box)
 
@@ -212,11 +213,10 @@ class GeoKasInsumos:
 
 
         self.combo_box2 = QComboBox(self.iface.mainWindow())
-        self.combo_box2.addItems(["Agregar Basemap ...", "XYZ Jamundi", "XYZ Bruselas"])
         self.combo_box2.currentTextChanged.connect(self.cambioComboBoxXYZ)
         self.toolbar.addWidget(self.combo_box2)
 
-        
+        self.check_license()
 
         configure_path = current_directory + "/icon_setting.png"
 
@@ -272,6 +272,26 @@ class GeoKasInsumos:
     
     def cambioComboBoxXYZ(self, text):
         print("Opcion seleccionada: "+text)
+
+
+        index = next((i for i, item in enumerate(self.array_xyzs) if item["nombre"] == text), -1)
+        if index != -1 and index!=0:
+            print(f"Index found: {index}")
+            layer = QgsRasterLayer(
+                "type=xyz&url="+self.array_xyzs[index]["url"]+"?token="+self.license_key+"&zmax="+str(self.array_xyzs[index]["zmax"]),
+                self.array_xyzs[index]["nombre"],
+                "wms"
+            )
+            if not layer.isValid():
+                print("Failed to load "+self.array_xyzs[index]["nombre"]+" layer")
+            else:
+                QgsProject.instance().addMapLayer(layer)
+        else:
+            print("Value not found")
+
+
+
+
         if text == "XYZ Jamundi":
             layer = QgsRasterLayer(
                 "type=xyz&url=https://xyz-jamundi.geokas.com.co/Z{z}/{y}/{X}.jpg?token=asbdasjdbas&zmax=23",
@@ -418,18 +438,20 @@ class GeoKasInsumos:
 
         base_url="https://1bdb-190-90-234-19.ngrok-free.app"
         url_restante_licencia="/api/plugins/insumos/check-license?token="
-        license_key=""
-        self.array_aoi = []
+        self.license_key=""
         self.array_rubber_bands = []
+        self.array_aoi = []
         self.array_aoi.append({"nombre": "Ir a...", "geometry": ""})
+        self.array_xyzs = []
+        self.array_xyzs.append({"nombre": "Agregar Basemap...", "url": "", "zmax": ""})
         if os.path.exists(self.license_file):
             with open(self.license_file, 'r') as file:
                 content = file.read()
-                license_key = content
+                self.license_key = content
                 # TODO: Eliminar caracteres extras adelante y atras de la licencia
                 
             try:
-                response = requests.get(base_url+url_restante_licencia+license_key, timeout=60)
+                response = requests.get(base_url+url_restante_licencia+self.license_key, timeout=60)
                 license_data = response.json()
                 #FIXME: Solucionar cuando no hay servidor activo
                 if response.status_code == 200:
@@ -464,11 +486,10 @@ class GeoKasInsumos:
                                 rubber_band.hide()
 
                                 self.array_rubber_bands.append(rubber_band)
-                    
 
-                    
-
-
+                        for xyz_sended in proyecto["xyzs"]:
+                            new_xyz ={"nombre": xyz_sended["nombre"], "url": xyz_sended["url"], "zmax": xyz_sended["max_zoom"]}
+                            self.array_xyzs.append(new_xyz)
                     
                     if self.ui_confuration_active:
                         self.dlg.buttonVerificar.setEnabled(True)
@@ -478,7 +499,7 @@ class GeoKasInsumos:
                         #TODO: Mejorar semantica duracion licencia
                         days_remaining = (datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]) - datetime.now().astimezone()).days
                         self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date())+". Días restantes: "+str(days_remaining))
-                        self.dlg.lineEditLicencia.setText(license_key)
+                        self.dlg.lineEditLicencia.setText(self.license_key)
                         self.dlg.check360.setEnabled(True)
                         self.dlg.checkModelo_3D.setEnabled(True)
                         self.dlg.checkNubePuntos.setEnabled(True)
@@ -521,6 +542,10 @@ class GeoKasInsumos:
         nombres_aoi = [aoi["nombre"] for aoi in self.array_aoi]
         self.combo_box.clear()
         self.combo_box.addItems(nombres_aoi)
+
+        nombres_xyz = [xyz["nombre"] for xyz in self.array_xyzs]
+        self.combo_box2.clear()
+        self.combo_box2.addItems(nombres_xyz)
 
         if self.ui_confuration_active:
             self.dlg.buttonVerificar.setEnabled(True)
