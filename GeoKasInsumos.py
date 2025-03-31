@@ -44,6 +44,9 @@ from datetime import datetime
 class GeoKasInsumos:
     """QGIS Plugin Implementation."""
 
+    license_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "license.txt")
+    view_configuration_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "view_configuration.txt")
+
     def __init__(self, iface):
         """Constructor.
 
@@ -283,44 +286,68 @@ class GeoKasInsumos:
             print("State changed: " + str(state))
 
     def viewInsumos(self):
-        if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
-            self.dlg_2 = GeoKasInsumosDockableDialog2()
-                
-        # Anclar el DockWidget
-        self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_2)
+        # Read the view_configuration.txt file and set boolean variables
+        view_360 = False
+        view_3D = False
+        view_point_cloud = False
 
-        self.dlg_2.show()
-        #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
-        web_view = QWebView()
-        web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/?scene=Jamundi&cX=-974.1265&cY=1136.1052&cZ=1170.6126&upX=0.0000&upY=0.0000&upZ=1.0000&tX=-972.6563&tY=1161.6604&tZ=1008.4842"))
-        # Remove all widgets from the container before adding a new one
-        while self.dlg_2.dialog_widget.contenedor.count() > 0:
-            widget_to_remove = self.dlg_2.dialog_widget.contenedor.takeAt(0).widget()
-            if widget_to_remove is not None:
-                widget_to_remove.deleteLater()
-
-        # Add the new widget
-        self.dlg_2.dialog_widget.contenedor.addWidget(web_view)
+        if os.path.exists(self.view_configuration_file):
+            with open(self.view_configuration_file, 'r') as file:
+                for line in file:
+                    if "360: Active" in line:
+                        view_360 = True
+                    elif "3D: Active" in line:
+                        view_3D = True
+                    elif "Point_Cloud: Active" in line:
+                        view_point_cloud = True
 
 
-        if not hasattr(self, 'dlg_3') or self.dlg_3 is None:
-            self.dlg_3 = GeoKasInsumosDockableDialog3()
-                
-        # Anclar el DockWidget
-        self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_3)
+        if hasattr(self, 'dlg_2') and self.dlg_2 is not None:
+            self.iface.mainWindow().removeDockWidget(self.dlg_2)
+            self.dlg_2.close()
+            self.dlg_2 = None
+        if hasattr(self, 'dlg_3') and self.dlg_3 is not None:
+            self.iface.mainWindow().removeDockWidget(self.dlg_3)
+            self.dlg_3.close()
+            self.dlg_3 = None
+        if view_3D:
+            if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
+                self.dlg_2 = GeoKasInsumosDockableDialog2()
+                    
+            # Anclar el DockWidget
+            self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_2)
 
-        self.dlg_3.show()
-        #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
-        web_view3 = QWebView()
-        web_view3.setUrl(QUrl("https://www.google.com"))
-        # Remove all widgets from the container before adding a new one
-        while self.dlg_3.dialog_widget.contenedor.count() > 0:
-            widget_to_remove = self.dlg_3.dialog_widget.contenedor.takeAt(0).widget()
-            if widget_to_remove is not None:
-                widget_to_remove.deleteLater()
+            self.dlg_2.show()
+            #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
+            web_view = QWebView()
+            web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/?scene=Jamundi&cX=-974.1265&cY=1136.1052&cZ=1170.6126&upX=0.0000&upY=0.0000&upZ=1.0000&tX=-972.6563&tY=1161.6604&tZ=1008.4842"))
+            # Remove all widgets from the container before adding a new one
+            while self.dlg_2.dialog_widget.contenedor.count() > 0:
+                widget_to_remove = self.dlg_2.dialog_widget.contenedor.takeAt(0).widget()
+                if widget_to_remove is not None:
+                    widget_to_remove.deleteLater()
+            # Add the new widget
+            self.dlg_2.dialog_widget.contenedor.addWidget(web_view)
 
-        # Add the new widget
-        self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
+        if view_360:
+            if not hasattr(self, 'dlg_3') or self.dlg_3 is None:
+                self.dlg_3 = GeoKasInsumosDockableDialog3()
+                    
+            # Anclar el DockWidget
+            self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_3)
+
+            self.dlg_3.show()
+            #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
+            web_view3 = QWebView()
+            web_view3.setUrl(QUrl("https://www.google.com"))
+            # Remove all widgets from the container before adding a new one
+            while self.dlg_3.dialog_widget.contenedor.count() > 0:
+                widget_to_remove = self.dlg_3.dialog_widget.contenedor.takeAt(0).widget()
+                if widget_to_remove is not None:
+                    widget_to_remove.deleteLater()
+
+            # Add the new widget
+            self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
 
     def check_license(self):
         """
@@ -328,17 +355,17 @@ class GeoKasInsumos:
         If the license is valid, enable the checkboxes and set the labels.
         If the license is invalid, disable the checkboxes and clear the labels.
         """
-        base_url="https://5ea8-190-90-234-21.ngrok-free.app/"
+
+
+        base_url="https://4ce2-190-90-234-18.ngrok-free.app/"
         url_restante_licencia="api/plugins/insumos/check-license?token="
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        file_path = current_directory+"/license.txt"
         license_key=""
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
+        if os.path.exists(self.license_file):
+            with open(self.license_file, 'r') as file:
                 content = file.read()
                 license_key = content
             try:
-                response = requests.get(base_url+url_restante_licencia+license_key)
+                response = requests.get(base_url+url_restante_licencia+license_key, timeout=60)
                 license_data = response.json()
                 if response.status_code == 200:
                     self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"]+" - "+license_data["data"]["licencia"]["proyecto"])
@@ -347,20 +374,29 @@ class GeoKasInsumos:
                     self.dlg.check360.setEnabled(True)
                     self.dlg.checkModelo_3D.setEnabled(True)
                     self.dlg.checkNubePuntos.setEnabled(True)
-                elif response.status_code == 401:
-                    self.dlg.labelNombreLicencia.setText("Licencia no valida")
+                else:
+                    self.iface.messageBar().pushCritical(
+                        "Error",
+                        license_data["error"],
+                    )
+                    
+                    if os.path.exists(self.license_file):
+                        os.remove(self.license_file)
+                    if os.path.exists(self.view_configuration_file):
+                        os.remove(self.view_configuration_file)
+                    
+                    self.dlg.labelNombreLicencia.setText(license_data["error"])
                     self.dlg.labelDuracionLicencia.setText("")
-                    self.dlg.lineEditLicencia.setText("")
+                    #self.dlg.lineEditLicencia.setText("")
                     self.dlg.check360.setEnabled(False)
                     self.dlg.checkModelo_3D.setEnabled(False)
                     self.dlg.checkNubePuntos.setEnabled(False)
-                elif response.status_code == 403:
-                    self.dlg.labelNombreLicencia.setText("Licencia Expirada")
-                    self.dlg.labelDuracionLicencia.setText("")
-                    self.dlg.lineEditLicencia.setText("")
-                    self.dlg.check360.setEnabled(False)
-                    self.dlg.checkModelo_3D.setEnabled(False)
-                    self.dlg.checkNubePuntos.setEnabled(False)
+            except requests.exceptions.Timeout:
+                self.iface.messageBar().pushCritical(
+                    "Error",
+                    "No se pudo acceder al servidor de GeoKas",
+                )
+                return
             except requests.RequestException as e:
                 print("An error occurred while verifying the license:", e)
         else:
@@ -369,23 +405,20 @@ class GeoKasInsumos:
             self.dlg.lineEditLicencia.setText("")
             self.dlg.check360.setEnabled(False)
             self.dlg.checkModelo_3D.setEnabled(False)
-            self.dlg.checkNubePuntos.setEnabled(False)
+
 
     def write_license(self):
-        current_directory = os.path.dirname(os.path.realpath(__file__))
-        file_path = current_directory+"/license.txt"
-    
-        if not os.path.exists(file_path):
+        if not os.path.exists(self.license_file):
             # Si el archivo no existe, lo creamos y escribimos algo en él
-            with open(file_path, 'w') as file:
+            with open(self.license_file, 'w') as file:
                 file.write(self.dlg.lineEditLicencia.text())
         else:
             # Si el archivo ya existe, lo leemos
-            with open(file_path, 'r') as file:
+            with open(self.license_file, 'r') as file:
                 content = file.read()
             if content != self.dlg.lineEditLicencia.text():
-                os.remove(file_path)
-                with open(file_path, 'w') as file:
+                os.remove(self.license_file)
+                with open(self.license_file, 'w') as file:
                     file.write(self.dlg.lineEditLicencia.text())
         self.check_license()
     
@@ -410,6 +443,20 @@ class GeoKasInsumos:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
+            # Create a text file with the information of the active checkboxes
+            with open(self.view_configuration_file, 'w') as file:
+                if self.dlg.check360.isChecked():
+                    file.write("360: Active\n")
+                else:
+                    file.write("360: Inactive\n")
+
+                if self.dlg.checkModelo_3D.isChecked():
+                    file.write("3D: Active\n")
+                else:
+                    file.write("3D: Inactive\n")
+
+                if self.dlg.checkNubePuntos.isChecked():
+                    file.write("Point_Cloud: Active\n")
+                else:
+                    file.write("Point_Cloud: Inactive\n")
             pass

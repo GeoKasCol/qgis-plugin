@@ -66,6 +66,12 @@
    <property name="text">
     <string>360</string>
    </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="autoRepeat">
+    <bool>false</bool>
+   </property>
   </widget>
   <widget class="QCheckBox" name="checkModelo_3D">
    <property name="enabled">
@@ -81,6 +87,9 @@
    </property>
    <property name="text">
     <string>Modelo 3D</string>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
    </property>
   </widget>
   <widget class="QCheckBox" name="checkNubePuntos">
