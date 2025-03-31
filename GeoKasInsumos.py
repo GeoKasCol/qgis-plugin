@@ -22,9 +22,9 @@
  ***************************************************************************/
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl, Qt
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox, QTableWidgetItem  # Add import for QComboBox, QCheckBox, and QTableWidgetItem
-from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
+from qgis.core import QgsRasterLayer, QgsProject, QgsWkbTypes  # Import QgsRasterLayer, QgsProject, and QgsWkbTypes
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -38,7 +38,8 @@ from qgis.PyQt.QtWidgets import QFrame
 from qgis.PyQt.QtWebKitWidgets import QWebView
 import requests
 from datetime import datetime
-#from PyQt5.QtWebEngineWidgets import QWebEngineView
+from qgis.core import QgsGeometry
+from qgis.gui import QgsRubberBand  # Import QgsRubberBand
 
 
 class GeoKasInsumos:
@@ -48,28 +49,8 @@ class GeoKasInsumos:
     view_configuration_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "view_configuration.txt")
     ui_confuration_active = False
     array_insumos = []
-
-    def add_insumo(self, nombre, tipo, fecha):
-        """Add a new insumo to the array_insumos list."""
-        new_insumo = {"nombre": nombre, "tipo": tipo, "fecha": fecha}
-        self.array_insumos.append(new_insumo)
-        print(f"Insumo added: {new_insumo}")
-
-    def fetch_and_process_insumos(self, url):
-        """Fetch an array of dictionaries from a request and process each item."""
-        try:
-            response = requests.get(url, timeout=30)
-            if response.status_code == 200:
-                insumos = response.json()  # Assuming the response is a JSON array
-                for insumo in insumos:
-                    nombre = insumo.get("nombre", "Desconocido")
-                    tipo = insumo.get("tipo", "Desconocido")
-                    fecha = insumo.get("fecha", "Desconocida")
-                    self.add_insumo(nombre, tipo, fecha)
-            else:
-                print(f"Failed to fetch insumos. Status code: {response.status_code}")
-        except requests.RequestException as e:
-            print(f"An error occurred while fetching insumos: {e}")
+    array_aoi = []
+    array_rubber_bands = []
 
     def __init__(self, iface):
         """Constructor.
@@ -117,8 +98,7 @@ class GeoKasInsumos:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('GeoKasInsumos', message)
-
-
+    
     def add_action(
         self,
         icon_path,
@@ -217,9 +197,11 @@ class GeoKasInsumos:
             self.actions[-1]
         )  # Add the action to the custom toolbar
 
+        
+
         # Add combo box to the custom toolbar
         self.combo_box = QComboBox(self.iface.mainWindow())
-        self.combo_box.addItems(["Ir a ...", "Jamundi", "Zipaquira"])
+        self.check_license()
         self.combo_box.currentTextChanged.connect(self.cambioComboBoxZona)
         self.toolbar.addWidget(self.combo_box)
 
@@ -253,9 +235,6 @@ class GeoKasInsumos:
         # will be set False in run()
         self.first_start = True
 
-
-        self.check_license()
-
     def unload(self):
         """Removes the plugin menu item, icon, and custom toolbar from QGIS GUI."""
         for action in self.actions:
@@ -272,6 +251,24 @@ class GeoKasInsumos:
 
     def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
+        index = next((i for i, item in enumerate(self.array_aoi) if item["nombre"] == text), -1)
+        if index != -1:
+            print(f"Index found: {index}")
+            try:
+                geometry_aoi = QgsGeometry.fromWkt(self.array_aoi[index]["geometry"])
+                print("Geometry created successfully")
+                if geometry_aoi.isEmpty():
+                    print("Geometry is empty")
+                else:
+                    print("Geometry created successfully")
+                    extent_aoi = geometry_aoi.boundingBox()
+                    self.iface.mapCanvas().setExtent(extent_aoi)
+                    self.iface.mapCanvas().refresh()
+                    # Perform operations with the geometry here
+            except Exception as e:
+                print(f"Error creating geometry: {e}")
+        else:
+            print("Value not found")
     
     def cambioComboBoxXYZ(self, text):
         print("Opcion seleccionada: "+text)
@@ -322,8 +319,15 @@ class GeoKasInsumos:
     def cambioMostrarAOI(self, state):
         if state == 2:
             print("State changed: " + str(state))
+
+            for rubber_band in self.array_rubber_bands:
+                rubber_band.show()
+
         elif state == 0:
             print("State changed: " + str(state))
+
+            for rubber_band in self.array_rubber_bands:
+                rubber_band.hide()
 
     def viewInsumos(self):
         # Read the view_configuration.txt file and set boolean variables
@@ -415,6 +419,9 @@ class GeoKasInsumos:
         base_url="https://1bdb-190-90-234-19.ngrok-free.app"
         url_restante_licencia="/api/plugins/insumos/check-license?token="
         license_key=""
+        self.array_aoi = []
+        self.array_rubber_bands = []
+        self.array_aoi.append({"nombre": "Ir a...", "geometry": ""})
         if os.path.exists(self.license_file):
             with open(self.license_file, 'r') as file:
                 content = file.read()
@@ -441,7 +448,27 @@ class GeoKasInsumos:
                         for insumo_360 in proyecto["360s"]:
                             new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"]}
                             self.array_insumos.append(new_insumo)
-                            
+                        for aoi_sended in proyecto["aois"]:
+                            new_aoi ={"nombre": aoi_sended["nombre"], "geometry": aoi_sended["polygon"]}
+                            self.array_aoi.append(new_aoi)
+
+                            canvas = self.iface.mapCanvas()
+                            geometry_rubber = QgsGeometry.fromWkt(aoi_sended["polygon"])
+                            if not geometry_rubber.isEmpty():
+                                rubber_band = QgsRubberBand(canvas, QgsWkbTypes.PolygonGeometry)
+                                rubber_band.setToGeometry(geometry_rubber, None)
+                                rubber_band.setFillColor(QColor(0, 0, 0, 0))  # Transparent fill
+                                rubber_band.setLineStyle(Qt.DotLine)  # Dotted line style
+                                rubber_band.setStrokeColor(QColor(255, 0, 0, 255))  # Set the stroke color to red
+                                rubber_band.setWidth(2)
+                                rubber_band.hide()
+
+                                self.array_rubber_bands.append(rubber_band)
+                    
+
+                    
+
+
                     
                     if self.ui_confuration_active:
                         self.dlg.buttonVerificar.setEnabled(True)
@@ -491,6 +518,10 @@ class GeoKasInsumos:
                 self.dlg.check360.setEnabled(False)
                 self.dlg.checkModelo_3D.setEnabled(False)
 
+        nombres_aoi = [aoi["nombre"] for aoi in self.array_aoi]
+        self.combo_box.clear()
+        self.combo_box.addItems(nombres_aoi)
+
         if self.ui_confuration_active:
             self.dlg.buttonVerificar.setEnabled(True)
             self.dlg.lineEditLicencia.setEnabled(True)
@@ -510,7 +541,6 @@ class GeoKasInsumos:
         if not hasattr(self, 'dlg') or self.dlg is None:
             self.dlg = GeoKasInsumosDialog()
 
-        print("iniciando configure")
 
         self.dlg.lineEditLicencia.textChanged.connect(self.on_license_changed)
         self.dlg.buttonVerificar.clicked.connect(self.button_verificar_clicked)
