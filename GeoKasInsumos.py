@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox  # Add import for QComboBox and QCheckBox
+from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox, QTableWidgetItem  # Add import for QComboBox, QCheckBox, and QTableWidgetItem
 from qgis.core import QgsRasterLayer, QgsProject  # Import QgsRasterLayer and QgsProject
 
 # Initialize Qt resources from file resources.py
@@ -47,6 +47,29 @@ class GeoKasInsumos:
     license_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "license.txt")
     view_configuration_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "view_configuration.txt")
     ui_confuration_active = False
+    array_insumos = []
+
+    def add_insumo(self, nombre, tipo, fecha):
+        """Add a new insumo to the array_insumos list."""
+        new_insumo = {"nombre": nombre, "tipo": tipo, "fecha": fecha}
+        self.array_insumos.append(new_insumo)
+        print(f"Insumo added: {new_insumo}")
+
+    def fetch_and_process_insumos(self, url):
+        """Fetch an array of dictionaries from a request and process each item."""
+        try:
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                insumos = response.json()  # Assuming the response is a JSON array
+                for insumo in insumos:
+                    nombre = insumo.get("nombre", "Desconocido")
+                    tipo = insumo.get("tipo", "Desconocido")
+                    fecha = insumo.get("fecha", "Desconocida")
+                    self.add_insumo(nombre, tipo, fecha)
+            else:
+                print(f"Failed to fetch insumos. Status code: {response.status_code}")
+        except requests.RequestException as e:
+            print(f"An error occurred while fetching insumos: {e}")
 
     def __init__(self, iface):
         """Constructor.
@@ -229,8 +252,9 @@ class GeoKasInsumos:
 
         # will be set False in run()
         self.first_start = True
-        self.check_license()
 
+
+        self.check_license()
 
     def unload(self):
         """Removes the plugin menu item, icon, and custom toolbar from QGIS GUI."""
@@ -281,12 +305,19 @@ class GeoKasInsumos:
     def button_verificar_clicked(self):
         if self.ui_confuration_active:
             print("*****Iniciando request")
+
             self.dlg.labelNombreLicencia.setText("Verificando licencia...")
-            self.dlg.labelNombreLicencia.repaint()
+            
+            self.dlg.labelCliente.setText("")
+
+            self.dlg.labelDuracionLicencia.setText("")
+
             self.dlg.lineEditLicencia.setEnabled(False)
             self.dlg.buttonVerificar.setEnabled(False)
+            
+            self.dlg.repaint()
+
             self.write_license()
-        
 
     def cambioMostrarAOI(self, state):
         if state == 2:
@@ -381,7 +412,7 @@ class GeoKasInsumos:
         """
 
 
-        base_url="https://96bf-190-90-234-18.ngrok-free.app"
+        base_url="https://1bdb-190-90-234-19.ngrok-free.app"
         url_restante_licencia="/api/plugins/insumos/check-license?token="
         license_key=""
         if os.path.exists(self.license_file):
@@ -401,12 +432,25 @@ class GeoKasInsumos:
                         "Licencia verificada correctamente",
                     )
                     print("********Iniciando request")
+                    self.array_insumos = []
+
+                    for proyecto in license_data["data"]["licencia"]["proyectos"]:
+                        for insumo_3d in proyecto["3ds"]:
+                            new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"]}
+                            self.array_insumos.append(new_insumo)
+                        for insumo_360 in proyecto["360s"]:
+                            new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"]}
+                            self.array_insumos.append(new_insumo)
+                            
                     
                     if self.ui_confuration_active:
                         self.dlg.buttonVerificar.setEnabled(True)
                         self.dlg.lineEditLicencia.setEnabled(True)
-                        self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"]+" - "+license_data["data"]["licencia"]["proyecto"])
-                        self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date()))
+                        self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"])
+                        self.dlg.labelCliente.setText(license_data["data"]["licencia"]["cliente"]["nombre"])
+                        #TODO: Mejorar semantica duracion licencia
+                        days_remaining = (datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]) - datetime.now().astimezone()).days
+                        self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date())+". Días restantes: "+str(days_remaining))
                         self.dlg.lineEditLicencia.setText(license_key)
                         self.dlg.check360.setEnabled(True)
                         self.dlg.checkModelo_3D.setEnabled(True)
@@ -427,7 +471,6 @@ class GeoKasInsumos:
                         print("ui activo")
                         self.dlg.labelNombreLicencia.setText(license_data["error"])
                         self.dlg.labelDuracionLicencia.setText("")
-                        #self.dlg.lineEditLicencia.setText("")
                         self.dlg.check360.setEnabled(False)
                         self.dlg.checkModelo_3D.setEnabled(False)
                         self.dlg.checkNubePuntos.setEnabled(False)
@@ -447,7 +490,19 @@ class GeoKasInsumos:
                 self.dlg.lineEditLicencia.setText("")
                 self.dlg.check360.setEnabled(False)
                 self.dlg.checkModelo_3D.setEnabled(False)
+
+        if self.ui_confuration_active:
+            self.dlg.buttonVerificar.setEnabled(True)
+            self.dlg.lineEditLicencia.setEnabled(True)
+            self.dlg.repaint()
     
+    def insumo_seleccionado(self, state):
+        row = self.dlg.tableInsumos.indexAt(self.dlg.tableInsumos.sender().pos()).row()
+        if state == 2:  # 2 significa que está marcado
+            print(f"El QCheckBox en la fila {row+1}, está marcado.")
+        else:
+            print(f"El QCheckBox en la fila {row+1}, está desmarcado.")
+
     def configure(self):
         """Run method that performs all the real work"""
 
@@ -455,8 +510,27 @@ class GeoKasInsumos:
         if not hasattr(self, 'dlg') or self.dlg is None:
             self.dlg = GeoKasInsumosDialog()
 
+        print("iniciando configure")
+
         self.dlg.lineEditLicencia.textChanged.connect(self.on_license_changed)
         self.dlg.buttonVerificar.clicked.connect(self.button_verificar_clicked)
+
+        self.dlg.tableInsumos.clearContents()
+        self.dlg.tableInsumos.setRowCount(0)
+        self.dlg.tableInsumos.setColumnCount(4)
+
+        for index, insumo in enumerate(self.array_insumos):
+            self.dlg.tableInsumos.insertRow(index)
+            checkbox = QCheckBox()
+            self.dlg.tableInsumos.setCellWidget(index, 0, checkbox)
+            checkbox.setStyleSheet("margin:auto;")
+            checkbox.stateChanged.connect(self.insumo_seleccionado)
+
+            self.dlg.tableInsumos.setItem(index, 1, QTableWidgetItem(insumo["nombre"]))
+            self.dlg.tableInsumos.setItem(index, 2, QTableWidgetItem(insumo["tipo"]))
+            self.dlg.tableInsumos.setItem(index, 3, QTableWidgetItem(insumo["fecha"]))
+
+        
 
         self.ui_confuration_active = True
         
