@@ -46,6 +46,7 @@ class GeoKasInsumos:
 
     license_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "license.txt")
     view_configuration_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "view_configuration.txt")
+    ui_confuration_active = False
 
     def __init__(self, iface):
         """Constructor.
@@ -228,6 +229,7 @@ class GeoKasInsumos:
 
         # will be set False in run()
         self.first_start = True
+        self.check_license()
 
 
     def unload(self):
@@ -277,7 +279,14 @@ class GeoKasInsumos:
             self.dlg.buttonVerificar.setEnabled(False)
 
     def button_verificar_clicked(self):
-        self.write_license()
+        if self.ui_confuration_active:
+            print("*****Iniciando request")
+            self.dlg.labelNombreLicencia.setText("Verificando licencia...")
+            self.dlg.labelNombreLicencia.repaint()
+            self.dlg.lineEditLicencia.setEnabled(False)
+            self.dlg.buttonVerificar.setEnabled(False)
+            self.write_license()
+        
 
     def cambioMostrarAOI(self, state):
         if state == 2:
@@ -349,64 +358,6 @@ class GeoKasInsumos:
             # Add the new widget
             self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
 
-    def check_license(self):
-        """
-        Check if the license file exists and read its content.
-        If the license is valid, enable the checkboxes and set the labels.
-        If the license is invalid, disable the checkboxes and clear the labels.
-        """
-
-
-        base_url="https://4ce2-190-90-234-18.ngrok-free.app/"
-        url_restante_licencia="api/plugins/insumos/check-license?token="
-        license_key=""
-        if os.path.exists(self.license_file):
-            with open(self.license_file, 'r') as file:
-                content = file.read()
-                license_key = content
-            try:
-                response = requests.get(base_url+url_restante_licencia+license_key, timeout=60)
-                license_data = response.json()
-                if response.status_code == 200:
-                    self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"]+" - "+license_data["data"]["licencia"]["proyecto"])
-                    self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date()))
-                    self.dlg.lineEditLicencia.setText(license_key)
-                    self.dlg.check360.setEnabled(True)
-                    self.dlg.checkModelo_3D.setEnabled(True)
-                    self.dlg.checkNubePuntos.setEnabled(True)
-                else:
-                    self.iface.messageBar().pushCritical(
-                        "Error",
-                        license_data["error"],
-                    )
-                    
-                    if os.path.exists(self.license_file):
-                        os.remove(self.license_file)
-                    if os.path.exists(self.view_configuration_file):
-                        os.remove(self.view_configuration_file)
-                    
-                    self.dlg.labelNombreLicencia.setText(license_data["error"])
-                    self.dlg.labelDuracionLicencia.setText("")
-                    #self.dlg.lineEditLicencia.setText("")
-                    self.dlg.check360.setEnabled(False)
-                    self.dlg.checkModelo_3D.setEnabled(False)
-                    self.dlg.checkNubePuntos.setEnabled(False)
-            except requests.exceptions.Timeout:
-                self.iface.messageBar().pushCritical(
-                    "Error",
-                    "No se pudo acceder al servidor de GeoKas",
-                )
-                return
-            except requests.RequestException as e:
-                print("An error occurred while verifying the license:", e)
-        else:
-            self.dlg.labelNombreLicencia.setText("Sin licencia")
-            self.dlg.labelDuracionLicencia.setText("")
-            self.dlg.lineEditLicencia.setText("")
-            self.dlg.check360.setEnabled(False)
-            self.dlg.checkModelo_3D.setEnabled(False)
-
-
     def write_license(self):
         if not os.path.exists(self.license_file):
             # Si el archivo no existe, lo creamos y escribimos algo en él
@@ -421,6 +372,81 @@ class GeoKasInsumos:
                 with open(self.license_file, 'w') as file:
                     file.write(self.dlg.lineEditLicencia.text())
         self.check_license()
+
+    def check_license(self):
+        """
+        Check if the license file exists and read its content.
+        If the license is valid, enable the checkboxes and set the labels.
+        If the license is invalid, disable the checkboxes and clear the labels.
+        """
+
+
+        base_url="https://96bf-190-90-234-18.ngrok-free.app"
+        url_restante_licencia="/api/plugins/insumos/check-license?token="
+        license_key=""
+        if os.path.exists(self.license_file):
+            with open(self.license_file, 'r') as file:
+                content = file.read()
+                license_key = content
+                # TODO: Eliminar caracteres extras adelante y atras de la licencia
+                
+            try:
+                response = requests.get(base_url+url_restante_licencia+license_key, timeout=60)
+                license_data = response.json()
+                #FIXME: Solucionar cuando no hay servidor activo
+                if response.status_code == 200:
+
+                    self.iface.messageBar().pushSuccess(
+                        "Validado",
+                        "Licencia verificada correctamente",
+                    )
+                    print("********Iniciando request")
+                    
+                    if self.ui_confuration_active:
+                        self.dlg.buttonVerificar.setEnabled(True)
+                        self.dlg.lineEditLicencia.setEnabled(True)
+                        self.dlg.labelNombreLicencia.setText(license_data["data"]["licencia"]["nombre"]+" - "+license_data["data"]["licencia"]["proyecto"])
+                        self.dlg.labelDuracionLicencia.setText("Desde "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_inicio"]).date())+" hasta "+str(datetime.fromisoformat(license_data["data"]["licencia"]["fecha_fin"]).date()))
+                        self.dlg.lineEditLicencia.setText(license_key)
+                        self.dlg.check360.setEnabled(True)
+                        self.dlg.checkModelo_3D.setEnabled(True)
+                        self.dlg.checkNubePuntos.setEnabled(True)
+                else:
+                    print("Licencia invalida")
+                    self.iface.messageBar().pushCritical(
+                        "Error",
+                        license_data["error"],
+                    )
+
+                    if os.path.exists(self.license_file):
+                        os.remove(self.license_file)
+                    if os.path.exists(self.view_configuration_file):
+                        os.remove(self.view_configuration_file)
+                    
+                    if self.ui_confuration_active:
+                        print("ui activo")
+                        self.dlg.labelNombreLicencia.setText(license_data["error"])
+                        self.dlg.labelDuracionLicencia.setText("")
+                        #self.dlg.lineEditLicencia.setText("")
+                        self.dlg.check360.setEnabled(False)
+                        self.dlg.checkModelo_3D.setEnabled(False)
+                        self.dlg.checkNubePuntos.setEnabled(False)
+                
+            except requests.exceptions.Timeout:
+                self.iface.messageBar().pushCritical(
+                    "Error",
+                    "No se pudo acceder al servidor de GeoKas",
+                )
+                return
+            except requests.RequestException as e:
+                print("An error occurred while verifying the license:", e)
+        else:
+            if self.ui_confuration_active:
+                self.dlg.labelNombreLicencia.setText("Sin licencia")
+                self.dlg.labelDuracionLicencia.setText("")
+                self.dlg.lineEditLicencia.setText("")
+                self.dlg.check360.setEnabled(False)
+                self.dlg.checkModelo_3D.setEnabled(False)
     
     def configure(self):
         """Run method that performs all the real work"""
@@ -432,6 +458,7 @@ class GeoKasInsumos:
         self.dlg.lineEditLicencia.textChanged.connect(self.on_license_changed)
         self.dlg.buttonVerificar.clicked.connect(self.button_verificar_clicked)
 
+        self.ui_confuration_active = True
         
 
         self.check_license()
