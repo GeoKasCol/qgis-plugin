@@ -24,7 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl, Qt
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox, QTableWidgetItem  # Add import for QComboBox, QCheckBox, and QTableWidgetItem
-from qgis.core import QgsRasterLayer, QgsProject, QgsWkbTypes  # Import QgsRasterLayer, QgsProject, and QgsWkbTypes
+from qgis.core import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, QgsCoordinateReferenceSystem  # Import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, and QgsCoordinateReferenceSystem
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -54,6 +54,7 @@ class GeoKasInsumos:
     array_xyzs = []
     license_key = ""
     array_views_insumos = []
+    actual_src = ""
 
     def __init__(self, iface):
         """Constructor.
@@ -87,21 +88,13 @@ class GeoKasInsumos:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
 
+        self.actual_src = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+        self.iface.mapCanvas().destinationCrsChanged.connect(self.on_project_crs_changed)
+
         self.checkbox_references = []  # Store references to QCheckBox objects
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
-        We implement this ourselves since we do not inherit QObject.
-
-        :param message: String for translation.
-        :type message: str, QString
-
-        :returns: Translated version of message.
-        :rtype: QString
-        """
-        # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('GeoKasInsumos', message)
     
     def add_action(
@@ -251,6 +244,11 @@ class GeoKasInsumos:
             self.toolbar.clear()  # Clear all widgets and actions from the toolbar
             self.iface.mainWindow().removeToolBar(self.toolbar)  # Remove the toolbar from the main window
             self.toolbar = None
+    
+    def on_project_crs_changed(self):
+        """Handle changes to the project's coordinate reference system (CRS)."""
+        new_crs = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+        self.actual_src = new_crs
 
     def cambioComboBoxZona(self, text):
         print("Opcion seleccionada: "+text)
@@ -259,6 +257,7 @@ class GeoKasInsumos:
             print(f"Index found: {index}")
             try:
                 geometry_aoi = QgsGeometry.fromWkt(self.array_aoi[index]["geometry"])
+
                 print("Geometry created successfully")
                 if geometry_aoi.isEmpty():
                     print("Geometry is empty")
@@ -369,6 +368,7 @@ class GeoKasInsumos:
                 if self.array_insumos[i]["vista"] == "" or self.array_insumos[i]["vista"] == None:
                     self.array_insumos[i]["vista"] = GeoKasInsumosDockableDialog2()
                     self.array_insumos[i]["vista"].setWindowTitle(self.array_insumos[i]["nombre"]+" - "+self.array_insumos[i]["tipo"])
+
                     web_view = QWebView()
                     web_view.setUrl(QUrl(self.array_insumos[i]["url"]))
                     # Remove all widgets from the container before adding a new one
@@ -556,6 +556,9 @@ class GeoKasInsumos:
 
                                 canvas = self.iface.mapCanvas()
                                 geometry_rubber = QgsGeometry.fromWkt(aoi_sended["polygon"])
+                                #geometry_rubber = QgsCoordinateTransform(QgsCoordinateReferenceSystem("EPSG:9377"), QgsCoordinateReferenceSystem(self.actual_src), QgsProject.instance()).transform(QgsGeometry.fromWkt(aoi_sended["polygon"]))
+                                geometry_rubber.transform(QgsCoordinateTransform(QgsCoordinateReferenceSystem("EPSG:9377"), QgsCoordinateReferenceSystem(self.actual_src), QgsProject.instance()))
+                                
                                 if not geometry_rubber.isEmpty():
                                     rubber_band = QgsRubberBand(canvas, QgsWkbTypes.PolygonGeometry)
                                     rubber_band.setToGeometry(geometry_rubber, None)
