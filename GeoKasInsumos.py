@@ -436,7 +436,7 @@ class GeoKasInsumos:
         """
 
 
-        base_url="https://1bdb-190-90-234-19.ngrok-free.app"
+        base_url="https://187b-190-90-234-21.ngrok-free.app"
         url_restante_licencia="/api/plugins/insumos/check-license?token="
         self.license_key=""
         self.array_rubber_bands = []
@@ -465,10 +465,10 @@ class GeoKasInsumos:
 
                     for proyecto in license_data["data"]["licencia"]["proyectos"]:
                         for insumo_3d in proyecto["3ds"]:
-                            new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"]}
+                            new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"], "id": insumo_3d["id"]}
                             self.array_insumos.append(new_insumo)
                         for insumo_360 in proyecto["360s"]:
-                            new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"]}
+                            new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"], "id": insumo_360["id"]}
                             self.array_insumos.append(new_insumo)
                         for aoi_sended in proyecto["aois"]:
                             new_aoi ={"nombre": aoi_sended["nombre"], "geometry": aoi_sended["polygon"]}
@@ -554,10 +554,26 @@ class GeoKasInsumos:
     
     def insumo_seleccionado(self, state):
         row = self.dlg.tableInsumos.indexAt(self.dlg.tableInsumos.sender().pos()).row()
-        if state == 2:  # 2 significa que está marcado
-            print(f"El QCheckBox en la fila {row+1}, está marcado.")
+        
+        if os.path.exists(self.view_configuration_file):
+            with open(self.view_configuration_file, 'r') as file:
+                lines = file.readlines()
+
+            with open(self.view_configuration_file, 'w') as file:
+                for line in lines:
+                    if not line.startswith(str(self.array_insumos[row]["id"])):
+                        file.write(line)
+            with open(self.view_configuration_file, 'a') as file:
+                if state == 2:
+                    file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Active\n")
+                else:
+                    file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Inactive\n")
         else:
-            print(f"El QCheckBox en la fila {row+1}, está desmarcado.")
+            with open(self.view_configuration_file, 'w') as file:
+                if state == 2:
+                    file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Active\n")
+                else:
+                    file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Inactive\n")
 
     def configure(self):
         """Run method that performs all the real work"""
@@ -574,9 +590,22 @@ class GeoKasInsumos:
         self.dlg.tableInsumos.setRowCount(0)
         self.dlg.tableInsumos.setColumnCount(4)
 
+        # Create a provisional array to save the "nombres" that are active
+        active_id = []
+
+        # Check the view_configuration_file for active items
+        if os.path.exists(self.view_configuration_file):
+            with open(self.view_configuration_file, 'r') as file:
+                for line in file:
+                    if "Active" in line:
+                        active_id.append(line.split(":")[0].strip())
+        print(active_id)
         for index, insumo in enumerate(self.array_insumos):
             self.dlg.tableInsumos.insertRow(index)
             checkbox = QCheckBox()
+            key_id_tipo= str(insumo["id"])+"-"+insumo["tipo"]
+            if key_id_tipo in active_id:
+                checkbox.setChecked(True)
             self.dlg.tableInsumos.setCellWidget(index, 0, checkbox)
             checkbox.setStyleSheet("margin:auto;")
             checkbox.stateChanged.connect(self.insumo_seleccionado)
