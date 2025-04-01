@@ -53,6 +53,7 @@ class GeoKasInsumos:
     array_rubber_bands = []
     array_xyzs = []
     license_key = ""
+    array_views_insumos = []
 
     def __init__(self, iface):
         """Constructor.
@@ -85,6 +86,8 @@ class GeoKasInsumos:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
+        self.checkbox_references = []  # Store references to QCheckBox objects
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -350,20 +353,52 @@ class GeoKasInsumos:
                 rubber_band.hide()
 
     def viewInsumos(self):
-        # Read the view_configuration.txt file and set boolean variables
-        view_360 = False
-        view_3D = False
-        view_point_cloud = False
+        array_paso_activos = []
 
+        # Check the view_configuration_file for active items
         if os.path.exists(self.view_configuration_file):
             with open(self.view_configuration_file, 'r') as file:
                 for line in file:
-                    if "360: Active" in line:
-                        view_360 = True
-                    elif "3D: Active" in line:
-                        view_3D = True
-                    elif "Point_Cloud: Active" in line:
-                        view_point_cloud = True
+                    if "Active" in line:
+                        array_paso_activos.append(line.split(":")[0].strip())
+        
+
+
+        for i in range(len(self.array_insumos)):
+            if str(self.array_insumos[i]["id"])+"-"+str(self.array_insumos[i]["tipo"]) in array_paso_activos:
+                if self.array_insumos[i]["vista"] == "" or self.array_insumos[i]["vista"] == None:
+                    self.array_insumos[i]["vista"] = GeoKasInsumosDockableDialog2()
+                    self.array_insumos[i]["vista"].setWindowTitle(self.array_insumos[i]["nombre"]+" - "+self.array_insumos[i]["tipo"])
+                    web_view = QWebView()
+                    web_view.setUrl(QUrl(self.array_insumos[i]["url"]))
+                    # Remove all widgets from the container before adding a new one
+                    while self.array_insumos[i]["vista"].dialog_widget.contenedor.count() > 0:
+                        widget_to_remove = self.array_insumos[i]["vista"].dialog_widget.contenedor.takeAt(0).widget()
+                        if widget_to_remove is not None:
+                            widget_to_remove.deleteLater()
+                    # Add the new widget
+                    self.array_insumos[i]["vista"].dialog_widget.contenedor.addWidget(web_view)
+                    self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.array_insumos[i]["vista"])
+                    self.array_insumos[i]["vista"].show()
+                else:
+                    print("Actualizando vista existente con nombre "+self.array_insumos[i]["nombre"]+"-"+self.array_insumos[i]["tipo"])
+                    web_view = QWebView()
+                    web_view.setUrl(QUrl(self.array_insumos[i]["url"]))
+                    # Remove all widgets from the container before adding a new one
+                    while self.array_insumos[i]["vista"].dialog_widget.contenedor.count() > 0:
+                        widget_to_remove = self.array_insumos[i]["vista"].dialog_widget.contenedor.takeAt(0).widget()
+                        if widget_to_remove is not None:
+                            widget_to_remove.deleteLater()
+                    # Add the new widget
+                    self.array_insumos[i]["vista"].dialog_widget.contenedor.addWidget(web_view)
+        for insumo in self.array_insumos:
+            print(str(str(insumo["id"])+"-"+insumo["tipo"])+"notnull" if insumo["checkbox"] is not None else str(str(insumo["id"])+"-"+insumo["tipo"])+"null")
+        """
+        if hasattr(self, 'dlg_2') and self.dlg_2 is not None:
+
+            self.iface.mainWindow().removeDockWidget(self.dlg_2)
+            self.dlg_2.close()
+            self.dlg_2 = None
 
 
         if hasattr(self, 'dlg_2') and self.dlg_2 is not None:
@@ -412,6 +447,7 @@ class GeoKasInsumos:
 
             # Add the new widget
             self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
+        """
 
     def write_license(self):
         if not os.path.exists(self.license_file):
@@ -460,37 +496,81 @@ class GeoKasInsumos:
                         "Validado",
                         "Licencia verificada correctamente",
                     )
-                    print("********Iniciando request")
-                    self.array_insumos = []
 
-                    for proyecto in license_data["data"]["licencia"]["proyectos"]:
-                        for insumo_3d in proyecto["3ds"]:
-                            new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"], "id": insumo_3d["id"]}
-                            self.array_insumos.append(new_insumo)
-                        for insumo_360 in proyecto["360s"]:
-                            new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"], "id": insumo_360["id"]}
-                            self.array_insumos.append(new_insumo)
-                        for aoi_sended in proyecto["aois"]:
-                            new_aoi ={"nombre": aoi_sended["nombre"], "geometry": aoi_sended["polygon"]}
-                            self.array_aoi.append(new_aoi)
+                    #self.array_insumos = []
 
-                            canvas = self.iface.mapCanvas()
-                            geometry_rubber = QgsGeometry.fromWkt(aoi_sended["polygon"])
-                            if not geometry_rubber.isEmpty():
-                                rubber_band = QgsRubberBand(canvas, QgsWkbTypes.PolygonGeometry)
-                                rubber_band.setToGeometry(geometry_rubber, None)
-                                rubber_band.setFillColor(QColor(0, 0, 0, 0))  # Transparent fill
-                                rubber_band.setLineStyle(Qt.DotLine)  # Dotted line style
-                                rubber_band.setStrokeColor(QColor(255, 0, 0, 255))  # Set the stroke color to red
-                                rubber_band.setWidth(2)
-                                rubber_band.hide()
+                    count_3ds_non_empty = sum(1 for proyecto in license_data["data"]["licencia"]["proyectos"] for insumo_3d in proyecto["3ds"] if insumo_3d["id"] != "")
+                    count_360s_non_empty = sum(1 for proyecto in license_data["data"]["licencia"]["proyectos"] for insumo_360 in proyecto["360s"] if insumo_360["id"] != "")
 
-                                self.array_rubber_bands.append(rubber_band)
+                    if count_3ds_non_empty + count_360s_non_empty == 0:
+                        self.array_insumos = []
+                    else:
 
-                        for xyz_sended in proyecto["xyzs"]:
-                            new_xyz ={"nombre": xyz_sended["nombre"], "url": xyz_sended["url"], "zmax": xyz_sended["max_zoom"]}
-                            self.array_xyzs.append(new_xyz)
-                    
+                        for insumo in self.array_insumos:
+                            print(f"id: {insumo['id']}, tipo: {insumo['tipo']}, nombre: {insumo['nombre']}")
+
+                        for proyecto in license_data["data"]["licencia"]["proyectos"]:
+
+                            for insumo_3d in proyecto["3ds"]:
+                                if len(self.array_insumos)>0:
+                                    if any(insumo["id"] == insumo_3d["id"] and insumo["tipo"] == "Modelo 3D" for insumo in self.array_insumos):
+                                        print("No se agregó el insumo "+insumo_3d["nombre"]+"-Modelo 3D"+" porque ya existe")
+                                        continue
+                                    else:
+                                        checkbox = QCheckBox()
+                                        checkbox.setStyleSheet("margin:auto;")
+                                        checkbox.stateChanged.connect(self.insumo_seleccionado)
+                                        new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"], "id": insumo_3d["id"], "vista" : "", "checkbox" : checkbox}
+                                        self.array_insumos.append(new_insumo)
+                                        print("Se agregó el insumo "+insumo_3d["nombre"]+"-Modelo 3D")
+                                else:
+                                    checkbox = QCheckBox()
+                                    checkbox.setStyleSheet("margin:auto;")
+                                    checkbox.stateChanged.connect(self.insumo_seleccionado)
+                                    new_insumo = {"nombre": insumo_3d["nombre"], "tipo": "Modelo 3D", "fecha": str(datetime.fromisoformat(insumo_3d["created_at"].replace("Z", "-05:00"))), "url": insumo_3d["url"], "id": insumo_3d["id"], "vista" : "", "checkbox" : checkbox}
+                                    self.array_insumos.append(new_insumo)
+                                    print("Se agregó el insumo "+insumo_3d["nombre"]+"-Modelo 3D")
+                                
+                            for insumo_360 in proyecto["360s"]:
+                                if len(self.array_insumos)>0:
+                                    if any(insumo["id"] == insumo_360["id"] and insumo["tipo"] == "360" for insumo in self.array_insumos):
+                                        print("No se agregó el insumo "+insumo_360["nombre"]+"-360"+" porque ya existe")
+                                        continue
+                                    else:
+                                        checkbox = QCheckBox()
+                                        checkbox.setStyleSheet("margin:auto;")
+                                        checkbox.stateChanged.connect(self.insumo_seleccionado)
+                                        new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"], "id": insumo_360["id"], "vista": "", "checkbox" : checkbox}
+                                        self.array_insumos.append(new_insumo)
+                                        print("Se agregó el insumo "+insumo_360["nombre"]+"-360")
+                                else:
+                                    checkbox = QCheckBox()
+                                    checkbox.setStyleSheet("margin:auto;")
+                                    checkbox.stateChanged.connect(self.insumo_seleccionado)
+                                    new_insumo = {"nombre": insumo_360["nombre"], "tipo": "360", "fecha": str(datetime.fromisoformat(insumo_360["created_at"].replace("Z", "-05:00"))), "url": insumo_360["url"], "id": insumo_360["id"], "vista": "", "checkbox" : checkbox}
+                                    self.array_insumos.append(new_insumo)
+                                    print("Se agregó el insumo "+insumo_360["nombre"]+"-360")
+                            for aoi_sended in proyecto["aois"]:
+                                new_aoi ={"nombre": aoi_sended["nombre"], "geometry": aoi_sended["polygon"]}
+                                self.array_aoi.append(new_aoi)
+
+                                canvas = self.iface.mapCanvas()
+                                geometry_rubber = QgsGeometry.fromWkt(aoi_sended["polygon"])
+                                if not geometry_rubber.isEmpty():
+                                    rubber_band = QgsRubberBand(canvas, QgsWkbTypes.PolygonGeometry)
+                                    rubber_band.setToGeometry(geometry_rubber, None)
+                                    rubber_band.setFillColor(QColor(0, 0, 0, 0))  # Transparent fill
+                                    rubber_band.setLineStyle(Qt.DotLine)  # Dotted line style
+                                    rubber_band.setStrokeColor(QColor(255, 0, 0, 255))  # Set the stroke color to red
+                                    rubber_band.setWidth(2)
+                                    rubber_band.hide()
+
+                                    self.array_rubber_bands.append(rubber_band)
+
+                            for xyz_sended in proyecto["xyzs"]:
+                                new_xyz ={"nombre": xyz_sended["nombre"], "url": xyz_sended["url"], "zmax": xyz_sended["max_zoom"]}
+                                self.array_xyzs.append(new_xyz)
+                        
                     if self.ui_confuration_active:
                         self.dlg.buttonVerificar.setEnabled(True)
                         self.dlg.lineEditLicencia.setEnabled(True)
@@ -554,25 +634,42 @@ class GeoKasInsumos:
     
     def insumo_seleccionado(self, state):
         row = self.dlg.tableInsumos.indexAt(self.dlg.tableInsumos.sender().pos()).row()
-        
+        print("Insumo seleccionado "+self.array_insumos[row]["nombre"]+"-"+self.array_insumos[row]["tipo"])
+
         if os.path.exists(self.view_configuration_file):
             with open(self.view_configuration_file, 'r') as file:
                 lines = file.readlines()
 
             with open(self.view_configuration_file, 'w') as file:
                 for line in lines:
-                    if not line.startswith(str(self.array_insumos[row]["id"])):
+                    if not line.startswith(str(str(self.array_insumos[row]['id'])+"-"+self.array_insumos[row]['tipo'])):
                         file.write(line)
             with open(self.view_configuration_file, 'a') as file:
                 if state == 2:
                     file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Active\n")
                 else:
+                    #print("Va a cerrar una vista, el valor de hasattr es "+str(hasattr(self, self.array_insumos[row]["vista"])))
+                    if self.array_insumos[row]["vista"] is not None and self.array_insumos[row]["vista"] != "":
+                        print("Cerrando vista de "+self.array_insumos[row]["nombre"]+"-"+self.array_insumos[row]["tipo"])
+                        self.iface.mainWindow().removeDockWidget(self.array_insumos[row]["vista"])
+                        self.array_insumos[row]["vista"].close()
+                        self.array_insumos[row]["vista"].deleteLater()
+                        self.array_insumos[row]["vista"].repaint()
+                        self.array_insumos[row]["vista"] = None
+                        self.iface.mainWindow().repaint()
                     file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Inactive\n")
         else:
             with open(self.view_configuration_file, 'w') as file:
                 if state == 2:
                     file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Active\n")
                 else:
+                    if self.array_insumos[row]["vista"] is not None and self.array_insumos[row]["vista"] != "":
+                        self.iface.mainWindow().removeDockWidget(self.array_insumos[row]["vista"])
+                        self.array_insumos[row]["vista"].close()
+                        self.array_insumos[row]["vista"].deleteLater()
+                        self.array_insumos[row]["vista"].repaint()
+                        self.array_insumos[row]["vista"] = None
+                        self.iface.mainWindow().repaint()
                     file.write(f"{str(self.array_insumos[row]['id'])}-{self.array_insumos[row]['tipo']}: Inactive\n")
 
     def configure(self):
@@ -600,16 +697,25 @@ class GeoKasInsumos:
                     if "Active" in line:
                         active_id.append(line.split(":")[0].strip())
         print(active_id)
+
+        self.checkbox_references.clear()  # Clear old references to avoid memory leaks
+
         for index, insumo in enumerate(self.array_insumos):
             self.dlg.tableInsumos.insertRow(index)
-            checkbox = QCheckBox()
-            key_id_tipo= str(insumo["id"])+"-"+insumo["tipo"]
-            if key_id_tipo in active_id:
-                checkbox.setChecked(True)
-            self.dlg.tableInsumos.setCellWidget(index, 0, checkbox)
+            key_id_tipo = str(insumo["id"]) + "-" + insumo["tipo"]
+            print("Creando la tabla para el insumo " + insumo["nombre"] + "-" + insumo["tipo"])
+
+            checkbox = QCheckBox()  # Create a new QCheckBox
             checkbox.setStyleSheet("margin:auto;")
             checkbox.stateChanged.connect(self.insumo_seleccionado)
+            self.checkbox_references.append(checkbox)  # Store reference to prevent deletion
 
+            if key_id_tipo in active_id:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
+
+            self.dlg.tableInsumos.setCellWidget(index, 0, checkbox)
             self.dlg.tableInsumos.setItem(index, 1, QTableWidgetItem(insumo["nombre"]))
             self.dlg.tableInsumos.setItem(index, 2, QTableWidgetItem(insumo["tipo"]))
             self.dlg.tableInsumos.setItem(index, 3, QTableWidgetItem(insumo["fecha"]))
@@ -618,8 +724,9 @@ class GeoKasInsumos:
 
         self.ui_confuration_active = True
         
-
+        print("Cantidad de insumos antes de check license en configuracion: "+str(len(self.array_insumos)))
         self.check_license()
+        print("Cantidad de insumos Despues de check license en configuracion: "+str(len(self.array_insumos))+"\n\n\n")
 
         # show the dialog
         self.dlg.show()
@@ -627,21 +734,22 @@ class GeoKasInsumos:
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
-        if result:
-            # Create a text file with the information of the active checkboxes
-            with open(self.view_configuration_file, 'w') as file:
-                if self.dlg.check360.isChecked():
-                    file.write("360: Active\n")
-                else:
-                    file.write("360: Inactive\n")
+        
+        # if result:
+        #     # Create a text file with the information of the active checkboxes
+        #     with open(self.view_configuration_file, 'w') as file:
+        #         if self.dlg.check360.isChecked():
+        #             file.write("360: Active\n")
+        #         else:
+        #             file.write("360: Inactive\n")
 
-                if self.dlg.checkModelo_3D.isChecked():
-                    file.write("3D: Active\n")
-                else:
-                    file.write("3D: Inactive\n")
+        #         if self.dlg.checkModelo_3D.isChecked():
+        #             file.write("3D: Active\n")
+        #         else:
+        #             file.write("3D: Inactive\n")
 
-                if self.dlg.checkNubePuntos.isChecked():
-                    file.write("Point_Cloud: Active\n")
-                else:
-                    file.write("Point_Cloud: Inactive\n")
-            pass
+        #         if self.dlg.checkNubePuntos.isChecked():
+        #             file.write("Point_Cloud: Active\n")
+        #         else:
+        #             file.write("Point_Cloud: Inactive\n")
+        #     pass
