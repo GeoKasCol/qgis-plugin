@@ -24,7 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl, Qt
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QComboBox, QCheckBox, QTableWidgetItem  # Add import for QComboBox, QCheckBox, and QTableWidgetItem
-from qgis.core import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, QgsCoordinateReferenceSystem  # Import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, and QgsCoordinateReferenceSystem
+from qgis.core import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsPointXY  # Import QgsRasterLayer, QgsProject, QgsWkbTypes, QgsCoordinateTransform, QgsCoordinateReferenceSystem, and QgsPointXY
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -39,11 +39,21 @@ from qgis.PyQt.QtWebKitWidgets import QWebView
 import requests
 from datetime import datetime
 from qgis.core import QgsGeometry
-from qgis.gui import QgsRubberBand  # Import QgsRubberBand
+from qgis.gui import QgsRubberBand, QgsMapTool  # Import QgsRubberBand and QgsMapTool
+from qgis.utils import iface
+
+
+rb=QgsRubberBand(iface.mapCanvas(),QgsWkbTypes.PointGeometry )
+rl=QgsRubberBand(iface.mapCanvas(),QgsWkbTypes.LineGeometry )
+premuto= False
+linea=False
+point0=iface.mapCanvas().getCoordinateTransform().toMapCoordinates(0, 0)
+point1=iface.mapCanvas().getCoordinateTransform().toMapCoordinates(0, 0)
 
 
 class GeoKasInsumos:
     """QGIS Plugin Implementation."""
+
 
     license_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "license.txt")
     view_configuration_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "view_configuration.txt")
@@ -55,6 +65,9 @@ class GeoKasInsumos:
     license_key = ""
     array_views_insumos = []
     actual_src = ""
+    json_response = ""
+
+    base_url="http://127.0.0.1:3000"
 
     def __init__(self, iface):
         """Constructor.
@@ -352,6 +365,12 @@ class GeoKasInsumos:
                 rubber_band.hide()
 
     def viewInsumos(self):
+        tool = PointTool(self.iface, self.iface.mapCanvas(), self.base_url, self.license_key, self.array_insumos, self.array_rubber_bands, self.json_response)
+        
+        self.iface.mapCanvas().setMapTool(tool)
+
+        """
+
         array_paso_activos = []
 
         # Check the view_configuration_file for active items
@@ -393,60 +412,7 @@ class GeoKasInsumos:
                     self.array_insumos[i]["vista"].dialog_widget.contenedor.addWidget(web_view)
         for insumo in self.array_insumos:
             print(str(str(insumo["id"])+"-"+insumo["tipo"])+"notnull" if insumo["checkbox"] is not None else str(str(insumo["id"])+"-"+insumo["tipo"])+"null")
-        """
-        if hasattr(self, 'dlg_2') and self.dlg_2 is not None:
-
-            self.iface.mainWindow().removeDockWidget(self.dlg_2)
-            self.dlg_2.close()
-            self.dlg_2 = None
-
-
-        if hasattr(self, 'dlg_2') and self.dlg_2 is not None:
-            self.iface.mainWindow().removeDockWidget(self.dlg_2)
-            self.dlg_2.close()
-            self.dlg_2 = None
-        if hasattr(self, 'dlg_3') and self.dlg_3 is not None:
-            self.iface.mainWindow().removeDockWidget(self.dlg_3)
-            self.dlg_3.close()
-            self.dlg_3 = None
-        if view_3D:
-            if not hasattr(self, 'dlg_2') or self.dlg_2 is None:
-                self.dlg_2 = GeoKasInsumosDockableDialog2()
-                    
-            # Anclar el DockWidget
-            self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_2)
-
-            self.dlg_2.show()
-            #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
-            web_view = QWebView()
-            web_view.setUrl(QUrl("https://3d-jamundi.geokas.com.co/App/?scene=Jamundi&cX=-974.1265&cY=1136.1052&cZ=1170.6126&upX=0.0000&upY=0.0000&upZ=1.0000&tX=-972.6563&tY=1161.6604&tZ=1008.4842"))
-            # Remove all widgets from the container before adding a new one
-            while self.dlg_2.dialog_widget.contenedor.count() > 0:
-                widget_to_remove = self.dlg_2.dialog_widget.contenedor.takeAt(0).widget()
-                if widget_to_remove is not None:
-                    widget_to_remove.deleteLater()
-            # Add the new widget
-            self.dlg_2.dialog_widget.contenedor.addWidget(web_view)
-
-        if view_360:
-            if not hasattr(self, 'dlg_3') or self.dlg_3 is None:
-                self.dlg_3 = GeoKasInsumosDockableDialog3()
-                    
-            # Anclar el DockWidget
-            self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.dlg_3)
-
-            self.dlg_3.show()
-            #self.dlg_2.contenedor.clear()  # Clear previous widgets in the container
-            web_view3 = QWebView()
-            web_view3.setUrl(QUrl("https://www.google.com"))
-            # Remove all widgets from the container before adding a new one
-            while self.dlg_3.dialog_widget.contenedor.count() > 0:
-                widget_to_remove = self.dlg_3.dialog_widget.contenedor.takeAt(0).widget()
-                if widget_to_remove is not None:
-                    widget_to_remove.deleteLater()
-
-            # Add the new widget
-            self.dlg_3.dialog_widget.contenedor.addWidget(web_view3)
+        
         """
 
     def write_license(self):
@@ -472,7 +438,6 @@ class GeoKasInsumos:
         """
 
 
-        base_url="https://187b-190-90-234-21.ngrok-free.app"
         url_restante_licencia="/api/plugins/insumos/check-license?token="
         self.license_key=""
         self.array_rubber_bands = []
@@ -487,8 +452,9 @@ class GeoKasInsumos:
                 # TODO: Eliminar caracteres extras adelante y atras de la licencia
                 
             try:
-                response = requests.get(base_url+url_restante_licencia+self.license_key, timeout=60)
+                response = requests.get(self.base_url+url_restante_licencia+self.license_key, timeout=60)
                 license_data = response.json()
+                self.json_response= license_data
                 #FIXME: Solucionar cuando no hay servidor activo
                 if response.status_code == 200:
 
@@ -756,3 +722,162 @@ class GeoKasInsumos:
         #         else:
         #             file.write("Point_Cloud: Inactive\n")
         #     pass
+
+class PointTool(QgsMapTool):
+    def __init__(self, iface, canvas, url_base, token, array_insumos, array_ruber_bands, json_response):
+        self.iface = iface
+        QgsMapTool.__init__(self, canvas)
+        self.canvas = canvas
+        self.url_base = url_base
+        self.token = token
+        self.array_insumos = array_insumos
+        self.array_ruber_bands = array_ruber_bands
+        self.json_response = json_response
+
+    def canvasPressEvent(self, event):
+        x = event.pos().x()
+        y = event.pos().y()
+        global rb, premuto, point0
+        if not premuto: 
+            premuto = True
+            rb = QgsRubberBand(iface.mapCanvas(), QgsWkbTypes.PointGeometry)
+            rb.setColor(QtCore.Qt.red)
+            point0 = self.canvas.getCoordinateTransform().toMapCoordinates(x, y)
+            rb.addPoint(point0)
+
+    def canvasMoveEvent(self, event):
+        x = event.pos().x()
+        y = event.pos().y()        
+        global premuto, point0, point1, linea, rl
+        if premuto:
+            if not linea:              
+                rl.setColor(QtCore.Qt.red)
+                point1 = self.canvas.getCoordinateTransform().toMapCoordinates(x, y)
+                rl.addPoint(point0)  
+                rl.addPoint(point1)
+                linea = True
+            else:
+                if linea: 
+                    point1 = self.canvas.getCoordinateTransform().toMapCoordinates(x, y)
+                    rl.reset(QgsWkbTypes.LineGeometry)
+                    rl.addPoint(point0)  
+                    rl.addPoint(point1)
+
+    def canvasReleaseEvent(self, event):
+        global premuto, linea, rb, rl, point1, point0
+        premuto = False
+        linea = False
+        actual_crs = self.canvas.mapSettings().destinationCrs()
+        crsDest2 = QgsCoordinateReferenceSystem('EPSG:9377')  # Origen Nacional
+        xform = QgsCoordinateTransform(actual_crs, crsDest2, QgsProject.instance())
+        pt1 = xform.transform(point0)
+
+        url_restante_3d = "/api/plugins/insumos/tresd-url-generate?token="
+
+        #print("Punto capturado: " + str(point0) + " en sistema de coordenadas " + str(actual_crs))
+        print("Punto capturado: " + str(point1) + " en sistema de coordenadas " + str(crsDest2))
+
+        print("Insumos: "+str(self.array_insumos))
+
+        for i in range(len(self.json_response["data"]["licencia"]["proyectos"])):
+            geometry_aoi = QgsGeometry.fromWkt(self.json_response["data"]["licencia"]["proyectos"][i]["aois"][0]["polygon"])
+            if not geometry_aoi.isEmpty():
+                #print("Geometry created successfully")
+                geometry_aoi.transform(QgsCoordinateTransform(QgsCoordinateReferenceSystem("EPSG:9377"), QgsCoordinateReferenceSystem(actual_crs), QgsProject.instance()))
+                if geometry_aoi.contains(QgsPointXY(pt1.x(), pt1.y())) and self.json_response["data"]["licencia"]["proyectos"][i]["3ds"] != []:
+                    print("El punto está dentro del AOI "+self.json_response["data"]["licencia"]["proyectos"][i]["nombre"])
+                    try:
+                        datos_query = "&id="+str(self.json_response["data"]["licencia"]["proyectos"][i]["3ds"][0]["id"])+"&x="+str(pt1.x())+"&y="+str(pt1.y())+"&src=9377"
+                        print("Iniciando request "+str(self.url_base + url_restante_3d + self.token + datos_query))
+                        response = requests.get(self.url_base + url_restante_3d + self.token+ datos_query, timeout=60)
+                        tresd_data = response.json()
+                        print("Response: "+str(tresd_data))
+                        #FIXME: Solucionar cuando no hay servidor activo
+                        if response.status_code == 200:
+
+                            for j in range(len(self.array_insumos)):
+                                if self.array_insumos[j]["id"] == self.json_response["data"]["licencia"]["proyectos"][i]["3ds"][0]["id"]:
+                                    if self.array_insumos[j]["vista"] == "" or self.array_insumos[j]["vista"] is None:
+                                        self.array_insumos[j]["vista"] = GeoKasInsumosDockableDialog2()
+                                        self.array_insumos[j]["vista"].setWindowTitle(self.array_insumos[j]["nombre"] + " - " + self.array_insumos[j]["tipo"])
+
+                                    web_view = QWebView()
+                                    web_view.setUrl(QUrl(tresd_data["data"]["url"]))
+
+                                    # Remove all widgets from the container before adding a new one
+                                    while self.array_insumos[j]["vista"].dialog_widget.contenedor.count() > 0:
+                                        widget_to_remove = self.array_insumos[j]["vista"].dialog_widget.contenedor.takeAt(0).widget()
+                                        if widget_to_remove is not None:
+                                            widget_to_remove.deleteLater()
+                                    self.array_insumos[j]["vista"].dialog_widget.contenedor.addWidget(web_view)
+                                    self.iface.mainWindow().addDockWidget(Qt.RightDockWidgetArea, self.array_insumos[j]["vista"])
+                                    self.array_insumos[j]["vista"].show()
+
+                            if self.array_insumos[i]["vista"] == "" or self.array_insumos[i]["vista"] == None:
+                                self.array_insumos[i]["vista"] = GeoKasInsumosDockableDialog2()
+                                self.array_insumos[i]["vista"].setWindowTitle(self.array_insumos[i]["nombre"]+" - "+self.array_insumos[i]["tipo"])
+
+                    except requests.exceptions.Timeout:
+                        self.iface.messageBar().pushCritical(
+                            "Error",
+                            "No se pudo acceder al servidor de GeoKas",
+                        )
+                        return
+                    except requests.RequestException as e:
+                        print("An error occurred while accessing to 3D Model:", e)
+                    
+
+
+        """
+
+        try:
+            response = requests.get(self.url_base + url_restante_3d + self.token, timeout=60)
+            tresd_data = response.json()
+            #FIXME: Solucionar cuando no hay servidor activo
+            if response.status_code == 200:
+                self.dock_widget.tresd_data["data"]["url"]
+
+                web_view = QWebView()
+                web_view.setUrl(QUrl(tresd_data["data"]["url"]))
+                # Remove all widgets from the container before adding a new one
+                while self.dock_widget.dialog_widget.contenedor.count() > 0:
+                    widget_to_remove = self.dock_widget.dialog_widget.contenedor.takeAt(0).widget()
+                    if widget_to_remove is not None:
+                        widget_to_remove.deleteLater()
+                # Add the new widget
+                self.dock_widget.dialog_widget.contenedor.addWidget(web_view)
+
+        except requests.exceptions.Timeout:
+            self.iface.messageBar().pushCritical(
+                "Error",
+                "No se pudo acceder al servidor de GeoKas",
+            )
+            return
+        except requests.RequestException as e:
+            print("An error occurred while accessing to 3D Model:", e)
+        
+        iface.messageBar().pushCritical(
+            "Resultado",
+            "La zona seleccionada no tiene un gemelo digital capturado en GeoKas.",
+        )"
+        """
+        rl.reset()
+        rb.reset()           
+        self.canvas.unsetMapTool(self)
+
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
+       
+    def isZoomTool(self):
+        return False
+
+    def isTransient(self):
+        return False
+
+    def isEditTool(self):
+        return True
+
+        
